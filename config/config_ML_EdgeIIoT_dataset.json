@@ -1,0 +1,39 @@
+{
+    "num_rows": 157800,
+    "name_dataset": "ML_EdgeIIoT_dataset",
+    "unwanted_columns": [
+        "Attack_type", 
+        "Attack_label", 
+        "frame.time",
+        "arp.dst.proto_ipv4",
+        "arp.src.proto_ipv4",
+        "http.file_data",
+        "http.request.uri.query",
+        "http.request.method",
+        "http.referer",
+        "http.request.full_uri",
+        "http.request.version",
+        "tcp.options",
+        "tcp.payload",
+        "tcp.srcport",
+        "dns.qry.name.len",
+        "mqtt.conack.flags",
+        "mqtt.msg",
+        "mqtt.protoname",
+        "mqtt.topic"
+    ],
+    "categorical_columns": [
+        "ip.src_host",
+        "ip.dst_host",
+        "arp.opcode",
+        "http.response",
+        "tcp.flags",
+        "dns.qry.name",
+        "dns.qry.qu",
+        "dns.qry.type",
+        "mqtt.conflag.cleansess",
+        "mqtt.conflags",
+        "mqtt.hdrflags",
+        "mqtt.msgtype"
+    ]
+}

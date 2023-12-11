@@ -1,0 +1,8 @@
+
+.DS_store
+myenv/
+etc/
+data/
+__pycache__
+mlruns/
+.ipynb_checkpoints/

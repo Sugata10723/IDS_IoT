@@ -1,0 +1,6 @@
+{
+    "name_dataset": "test_dataset",
+    "num_rows": 1000,
+    "unwanted_columns": [],
+    "categorical_columns": []
+}

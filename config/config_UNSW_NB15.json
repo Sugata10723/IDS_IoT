@@ -1,0 +1,15 @@
+{
+    "num_rows": 1000,
+    "name_dataset": "UNSW_NB15",
+    "unwanted_columns": [
+          "id",
+          "label",
+          "attack_cat"
+        ],
+        "categorical_columns": [
+          "proto",
+          "service",
+          "state"
+        ]
+}
+      
