@@ -13,12 +13,27 @@ class IoTAnomalyDetector:
         self.cluster_normal = None
         self.pca_anomaly = None
         self.pca_normal = None
+        self.pca_plot = None
 
     def splitsubsystem(self, X, y):
         combined_data = pd.DataFrame(X)
         combined_data['label'] = y
         anomaly_data = combined_data[combined_data['label'] == 1]
         normal_data = combined_data[combined_data['label'] == 0]
+
+        # Plotting the data
+        print("Plotting the data")
+        self.pca_plot = PCA(n_components=2)
+        X_plot = pd.DataFrame(self.pca_plot.fit_transform(X))
+        anomaly_plot = pd.DataFrame(self.pca_plot.transform(anomaly_data.drop('label', axis=1)))
+        normal_plot = pd.DataFrame(self.pca_plot.transform(normal_data.drop('label', axis=1)))
+
+        plt.figure(figsize=(10, 7))
+        plt.scatter(anomaly_plot.iloc[:, 0], anomaly_plot.iloc[:, 1], label='Anomaly')
+        plt.scatter(normal_plot.iloc[:, 0], normal_plot.iloc[:, 1], label='Normal')
+        plt.legend()
+        plt.show()
+
         return anomaly_data.drop('label', axis=1), normal_data.drop('label', axis=1)
 
     def featureselection(self, data):
@@ -33,9 +48,8 @@ class IoTAnomalyDetector:
         data['cluster'] = clusters
         cluster_list = [data[data['cluster'] == i].drop('cluster', axis=1) for i in range(k)]
 
-        # Apply PCA for dimensionality reduction
-        pca = PCA(n_components=2)
-        data_pca = pd.DataFrame(pca.fit_transform(data.drop('cluster', axis=1)))
+        # Plotting the data
+        data_pca = pd.DataFrame(self.pca_plot.fit_transform(data.drop('cluster', axis=1)))
         data_pca['cluster'] = clusters
 
         # Plotting the clusters
@@ -67,6 +81,24 @@ class IoTAnomalyDetector:
         print("normal_data")
         self.cluster_normal = self.makeclustereddata(normal_data, self.k)
 
+    def plot_results(self, X, predictions):
+        # Plotting the results
+        X_transformed = pd.DataFrame(self.pca_plot.fit_transform(X))
+        plt.figure(figsize=(10, 7))
+        colors = ['blue' if label == 0 else 'red' if label == 1 else 'green' for label in predictions]
+        scatter = plt.scatter(X_transformed.iloc[:, 0], X_transformed.iloc[:, 1], c=colors, edgecolor='k')
+
+        # Adding legend
+        classes = ['Normal', 'Anomaly', 'Unknown']
+        class_colours = ['blue','red', 'green']
+        recs = []
+        for i in range(0,len(class_colours)):
+            recs.append(mpatches.Rectangle((0,0),1,1,fc=class_colours[i]))
+        plt.legend(recs,classes,loc=4)
+        plt.title('Results')
+
+        plt.show()
+
     def predict(self, X):
         anomaly_result = []
         normal_result = []
@@ -92,24 +124,8 @@ class IoTAnomalyDetector:
             else:
                 predictions.append(1)
 
-        # Plotting the results
-        pca = PCA(n_components=2)
-        X_transformed = pd.DataFrame(pca.fit_transform(X))
-        plt.figure(figsize=(10, 7))
-        colors = ['blue' if label == 0 else 'red' if label == 1 else 'green' for label in predictions]
-        scatter = plt.scatter(X_transformed.iloc[:, 0], X_transformed.iloc[:, 1], c=colors, edgecolor='k')
-
-        # Adding legend
-        classes = ['Normal', 'Anomaly', 'Unknown']
-        class_colours = ['blue','red', 'green']
-        recs = []
-        for i in range(0,len(class_colours)):
-            recs.append(mpatches.Rectangle((0,0),1,1,fc=class_colours[i]))
-        plt.legend(recs,classes,loc=4)
-
-        plt.show()
-
+        
+        self.plot_results(X, predictions)
         return predictions
         
-        return predictions
 

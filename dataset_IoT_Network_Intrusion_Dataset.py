@@ -3,7 +3,7 @@ from zipfile import ZipFile
 import os
 import json
 
-class Dataset:
+class Dataset_IoT_Network_Intrusion_Dataset:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
     def __init__(self, config_filename='config.json'):
