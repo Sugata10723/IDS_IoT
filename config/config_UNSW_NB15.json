@@ -1,5 +1,5 @@
 {
-    "num_rows": 5000,
+    "num_rows": 1000,
     "name_dataset": "UNSW_NB15",
     "unwanted_columns": [
           "id",

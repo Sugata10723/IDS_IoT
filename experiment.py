@@ -25,6 +25,9 @@ class Experiment:
             trainer.fit()
             trainer.evaluate()
 
+            # Log the model and its metrics to MLflow
+            mlflow.log_params(model_params)
+
             self._log_metrics_and_model(trainer, model_instance)
 
     def _preprocess_data(self):
