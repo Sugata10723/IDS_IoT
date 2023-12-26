@@ -1,7 +1,6 @@
 {
-    "nrows": 10000,
+    "nrows": 20000,
     "name_dataset": "IoT_Network_Intrusion_Dataset",
-    "if_scaling" : true,
     "unwanted_columns": ["Cat",
                         "Sub_Cat", 
                         "Label",

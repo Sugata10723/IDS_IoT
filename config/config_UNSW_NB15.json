@@ -1,14 +1,13 @@
 {
-    "nrows": 20000,
+    "nrows": 100000,
     "name_dataset": "UNSW-NB15_1.csv",
-    "if_scaling" : false,
     "unwanted_columns": [
+      "attack_cat"
       ],
     "categorical_columns": [
       "proto",
       "service",
       "state",
-      "attack_cat",
       "dstip",
       "srcip",
       "dsport"
