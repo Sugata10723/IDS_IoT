@@ -9,12 +9,9 @@ class Dataset_UNSW_NB15:
         self.CONFIG_FILE_PATH = os.path.join(self.BASE_DIR, 'config', config_filename)
         self.config = self.load_config()
         self.filename = self.config['name_dataset']
-
-        self.DATA_TRAINING_CSV_FILE_PATH = f"{self.BASE_DIR}/data/{self.filename}/{self.filename}_training-set.csv"
-        self.DATA_TESTING_CSV_FILE_PATH = f"{self.BASE_DIR}/data/{self.filename}/{self.filename}_testing-set.csv"
-        
-        self.training_data = None
-        self.testing_data = None
+        self.DATA_FILE_PATH = f"{self.BASE_DIR}/data/UNSW_NB15/{self.filename}"
+        self.DATA_FEATURES_FILE_PATH = f"{self.BASE_DIR}/data/UNSW_NB15/test.csv"
+        self.data = None
         self.labels = None
         self.load_data()
 
@@ -23,14 +20,14 @@ class Dataset_UNSW_NB15:
             return json.load(f)
 
     def load_data(self):
-        self.training_data = pd.read_csv(self.DATA_TRAINING_CSV_FILE_PATH, nrows=self.config['num_rows'])
-        self.testing_data = pd.read_csv(self.DATA_TESTING_CSV_FILE_PATH, nrows=self.config['num_rows'])
-        
-        self.data = pd.concat([self.training_data, self.testing_data])
-        self.labels = self.data['label'].map({1: 1, 0: 0})
-        
-        self.data = pd.DataFrame(self.data)
-        self.labels = pd.DataFrame(self.labels)
+        nrows = int(self.config['nrows'])
+        self.data = pd.read_csv(self.DATA_FILE_PATH, nrows=nrows)
+        features = pd.read_csv(self.DATA_FEATURES_FILE_PATH, index_col='No.')
+        features = features['Name']
+        self.data.columns = features
+        self.labels = self.data['Label']
+        self.data.drop(columns=['Label'], inplace=True)
+
 
         
 

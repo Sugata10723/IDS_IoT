@@ -1,0 +1,14 @@
+{
+    "nrows": 10000,
+    "name_dataset": "KDDTest+.txt",
+    "if_scaling" : true,
+    "unwanted_columns": [
+          "difficulty"
+        ],
+        "categorical_columns": [
+          "protocol_type",
+          "service",
+          "flag"
+        ]
+}
+      

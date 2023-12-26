@@ -23,9 +23,9 @@ class Dataset_IoT_Network_Intrusion_Dataset:
 
     def load_data(self):
         self.data = pd.read_csv(self.DATA_CSV_FILE_PATH)
-        n_rows = self.config['num_rows']
-        anomaly_data = self.data.loc[self.data['Label'] == 'Anomaly'].head(int(n_rows/2)).copy()
-        normal_data = self.data.loc[self.data['Label'] == 'Normal'].head(int(n_rows/2)).copy()
+        nrows = self.config['nrows']
+        anomaly_data = self.data.loc[self.data['Label'] == 'Anomaly'].head(int(nrows/2)).copy()
+        normal_data = self.data.loc[self.data['Label'] == 'Normal'].head(int(nrows/2)).copy()
 
         self.data = pd.concat([anomaly_data, normal_data])
         self.labels = self.data['Label'].map({'Anomaly': 1, 'Normal': 0})
