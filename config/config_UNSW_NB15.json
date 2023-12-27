@@ -1,5 +1,5 @@
 {
-    "nrows": 100000,
+    "nrows": 20000,
     "name_dataset": "UNSW-NB15_1.csv",
     "unwanted_columns": [
       "attack_cat"
@@ -10,7 +10,8 @@
       "state",
       "dstip",
       "srcip",
-      "dsport"
+      "dsport",
+      "sport"
     ]
 }
       

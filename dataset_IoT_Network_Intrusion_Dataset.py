@@ -29,9 +29,8 @@ class Dataset_IoT_Network_Intrusion_Dataset:
 
         self.data = pd.concat([anomaly_data, normal_data])
         self.labels = self.data['Label'].map({'Anomaly': 1, 'Normal': 0})
+        self.data.drop(columns=['Label'], inplace=True)
         
-        self.data = pd.DataFrame(self.data)
-        self.labels = pd.DataFrame(self.labels)
 
         
 

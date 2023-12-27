@@ -1,16 +1,16 @@
 {
-    "nrows": 100000,
+    "nrows": 50000,
     "name_dataset": "KDDTest+.txt",
     "unwanted_columns": [
         ],
-        "categorical_columns": [
-          "service",
-          "land",
-          "protocol_type",
-          "flag",
-          "is_host_login",
-          "logged_in",
-          "is_guest_login"
-        ]
+    "categorical_columns": [
+      "service",
+      "land",
+      "protocol_type",
+      "flag",
+      "is_host_login",
+      "logged_in",
+      "is_guest_login"
+    ]
 }
       
