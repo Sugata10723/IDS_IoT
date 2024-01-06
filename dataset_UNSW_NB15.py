@@ -25,9 +25,19 @@ class Dataset_UNSW_NB15:
         features = pd.read_csv(self.DATA_FEATURES_FILE_PATH, index_col='No.')
         features = features['Name']
         self.data.columns = features
-        self.labels = self.data['Label']
-        self.data.drop(columns=['Label'], inplace=True)
 
+        # 不要なカラムを削除
+        self.data = self.data.drop(columns=self.config['unwanted_columns'])
+
+        # sport, dsportの一部が文字データになっているので削除する
+        #for col in ['sport', 'dsport']:
+        #    if col in self.data.columns:
+        #        self.data[col] = pd.to_numeric(self.data[col], errors='coerce')
+        #self.data = self.data.dropna(subset=['sport', 'dsport'])
+        #self.data.reset_index(drop=True, inplace=True) # indexを振り直す
+
+        self.labels = self.data['Label'] # Pandas Series
+        self.data = self.data.drop(columns=['Label']) # Pandas DataFrame
 
         
 

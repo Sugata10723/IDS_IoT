@@ -1,87 +1,90 @@
 import pandas as pd
+import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.ensemble import IsolationForest
-from scipy.spatial import distance
+from sklearn.preprocessing import OneHotEncoder
+import xgboost as xgb
 from sklearn.decomposition import PCA
-from umap import UMAP
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
+from scipy.spatial import distance
 import sklearn.preprocessing as preprocessing
 
+
 class AnomalyDetector:
-    def __init__(self, k, n_features):
+    def __init__(self, k, categorical_columns):
         self.k = k
-        self.n_features = n_features
-        self.mm = None
+        self.categorical_columns = categorical_columns
+        self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
+        self.mm = preprocessing.MinMaxScaler()
+        self.important_features_attack = None
+        self.important_features_normal = None
+        self.pca_attack = None
+        self.pca_normal = None
         self.sampled_attack = None
         self.sampled_normal = None
         self.iforest_attack = None
         self.iforest_normal = None
-        self.pca_attack = None
-        self.pca_normal = None
-
-        # for plotting
-        self.attack_data = None
-        self.normal_data = None
-        self.anomaly_scores_a = None
-        self.anomaly_scores_n = None
-        self.X_attack = None
 
     def splitsubsystem(self, X, y):
-        # 攻撃データと正常データに分割
-        combined_data = pd.DataFrame(X)
-        combined_data['label'] = y
-        attack_data = combined_data[combined_data['label'] == 1]
-        normal_data = combined_data[combined_data['label'] == 0]
-        attack_data = attack_data.drop('label', axis=1)
-        normal_data = normal_data.drop('label', axis=1)
+        attack_indices = np.where(y == 1)[0]
+        normal_indices = np.where(y == 0)[0]
+        return X[attack_indices], y[attack_indices], X[normal_indices], y[normal_indices]
 
-        return attack_data, normal_data
+    def feature_selection(self, data, y):
+        # FIを用いて特徴量選択
+        xgb_model = xgb.XGBRegressor() # xgboostを使用
+        xgb_model.fit(data, y)
+        feature_importances = xgb_model.feature_importances_
+        important_features = np.argsort(feature_importances)[-30:] # 30個の特徴量を選択
+        data_fi = data[:, important_features]
 
-    def featureselection(self, data):
-        # PCAを使用して次元を削減
-        pca = PCA(n_components=self.n_features)
-        data_pca = pd.DataFrame(pca.fit_transform(data))
-        # 実験のためPCAを行わない
-        #data_pca = data
-
-        return data_pca, pca
+        # 重要な特徴量を除いた特徴量からPCAで特徴抽出
+        remaining_features = np.delete(np.arange(data.shape[1]), important_features)
+        remaining_data = data[:, remaining_features]
+        pca = PCA(n_components=20) # 20次元に圧縮
+        data_pca = pca.fit_transform(remaining_data)
+        data_fs = np.concatenate([data_pca, data_fi], axis=1)
+        return data_fs, pca, important_features
 
     def get_nearest_points(self, data, kmeans):
         nearest_points = []
         for i, center in enumerate(kmeans.cluster_centers_):
-            cluster_data = data[data['cluster'] == i]
-            if not cluster_data.empty:  # k-meansの特性より、空のクラスタが存在する可能性がある
-                distances = cluster_data.apply(lambda x: distance.euclidean(x[:-1], center), axis=1)
-                nearest_point = distances.idxmin()
-                nearest_points.append(data.loc[nearest_point])
-        nearest_points = pd.DataFrame(nearest_points)
-        nearest_points = nearest_points.drop('cluster', axis=1)
+            cluster_data = data[data[:, -1] == i]
+            if len(cluster_data) > 0:  # k-meansの特性より、空のクラスタが存在する可能性がある
+                distances = np.apply_along_axis(lambda x: distance.euclidean(x[:-1], center), 1, cluster_data)
+                nearest_point = np.argmin(distances)
+                nearest_points.append(cluster_data[nearest_point])
+        nearest_points = np.array(nearest_points)
+        nearest_points = nearest_points[:, :-1]  # 'cluster' columnを削除
         return nearest_points
 
     def make_cluster(self, data, k):
         if len(data) < self.k: # サンプル数がkより小さい場合はそのまま返す
             return data
         else:
-            data = data.copy()
             kmeans = KMeans(n_clusters=k, n_init=10)
             clusters = kmeans.fit_predict(data)
-            data['cluster'] = clusters
+            data = np.column_stack((data, clusters))  # 'cluster' columnを追加
             data_sampled = self.get_nearest_points(data, kmeans)
             return data_sampled
 
     def fit(self, X, y):
-        # preprocessing
-        #self.mm = preprocessing.MinMaxScaler()
-        #X = self.mm.fit_transform(X)
-        attack_data, normal_data = self.splitsubsystem(X, y)
-        self.attack_data, self.pca_attack = self.featureselection(attack_data)
-        self.normal_data, self.pca_normal = self.featureselection(normal_data)
-        self.sampled_attack = self.make_cluster(self.attack_data, self.k)
-        self.sampled_normal = self.make_cluster(self.normal_data, self.k)
-        
-        # training
-        self.iforest_attack = IsolationForest(n_estimators=50, max_samples=min(100, self.k)).fit(self.sampled_attack) # サンプル数kが100を下回る可能性があるため、min(100, k)を使用
+        ## Preprocessing X: Pandas DataFrame, y: NumPy Array
+        # one-hotエンコード 入力：DataFrame　出力：ndarray
+        X_ohe = self.ohe.fit_transform(X[self.categorical_columns])
+        X = np.concatenate([X.drop(columns=self.categorical_columns).values, X_ohe], axis=1)
+        # 正規化 入力：ndarray　出力：ndarray
+        X = self.mm.fit_transform(X)
+        # サブシステムに分割 入力：ndarray　出力：ndarray
+        raw_attack_data, y_attack, raw_normal_data, y_normal = self.splitsubsystem(X, y)
+        # 特徴量選択 入力：ndarray　出力：ndarray
+        attack_data, self.pca_attack, self.important_features_attack = self.feature_selection(raw_attack_data, y_attack)
+        normal_data, self.pca_normal, self.important_features_normal = self.feature_selection(raw_normal_data, y_normal)
+        # クラスタリング 入力：ndarray　出力：ndarray
+        self.sampled_attack = self.make_cluster(attack_data, self.k)
+        self.sampled_normal = self.make_cluster(normal_data, self.k)
+    
+        ## training 入力：ndarray
+        self.iforest_attack = IsolationForest(n_estimators=50, max_samples=min(100, self.k)).fit(self.sampled_attack)
         self.iforest_normal = IsolationForest(n_estimators=50, max_samples=min(100, self.k)).fit(self.sampled_normal)
         
     def predict(self, X):
@@ -89,29 +92,34 @@ class AnomalyDetector:
         normal_results = []
         predictions = []
         total_points = len(X)
-        
-        #X = self.mm.transform(X)
-        X_attack = pd.DataFrame(self.pca_attack.transform(X))
-        self.X_attack = X_attack # plotで使用 後で消す
-        X_normal = pd.DataFrame(self.pca_normal.transform(X))
-        # 実験のためPCAを行わない
-        #X_attack = X
-        #X_normal = X
 
+        ## preprocessing
+        # one-hotエンコード　入力：DataFrame　出力：ndarray
+        X_ohe = self.ohe.transform(X[self.categorical_columns])
+        X = np.concatenate([X.drop(columns=self.categorical_columns).values, X_ohe], axis=1)
+        # 正規化　入力：ndarray　出力：ndarray
+        X = self.mm.transform(X)
+        # 特徴量選択 入力：ndarray 出力：ndarray
+        X_important_attack = X[:, self.important_features_attack]
+        X_pca_attack = self.pca_attack.transform(X[:, np.delete(np.arange(X.shape[1]), self.important_features_attack)])
+        X_attack = np.concatenate([X_important_attack, X_pca_attack], axis=1)
+
+        X_important_normal = X[:, self.important_features_normal]
+        X_pca_normal = self.pca_normal.transform(X[:, np.delete(np.arange(X.shape[1]), self.important_features_normal)])
+        X_normal = np.concatenate([X_important_normal, X_pca_normal], axis=1)
+
+        ## predict
         attack_results = self.iforest_attack.predict(X_attack)
         attack_results = [1 if result == 1 else 0 for result in attack_results]   
-        self.anomaly_scores_a = self.iforest_attack.decision_function(X_attack) 
         
         normal_results = self.iforest_normal.predict(X_normal)
         normal_results = [1 if result == 1 else 0 for result in normal_results]
-        self.anomaly_scores_n = self.iforest_normal.decision_function(X_normal)
         
         for i in range(total_points):
-            if attack_results[i] == 0 and normal_results[i] == 1:
-                predictions.append(0)  # normal
-            elif attack_results[i] == 0 and normal_results[i] == 0:
-                predictions.append(-1)  # unknown
-            else:
-                predictions.append(1)  # attack
-
+            if attack_results[i] == 0 and normal_results[i] == 1: # normal
+                predictions.append(0)  
+            elif attack_results[i] == 0 and normal_results[i] == 0: # unknown
+                predictions.append(-1)  
+            else: # attack
+                predictions.append(1)
         return predictions

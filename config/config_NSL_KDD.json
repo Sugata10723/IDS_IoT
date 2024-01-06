@@ -1,6 +1,7 @@
 {
-    "nrows": 50000,
+    "nrows": 100000,
     "name_dataset": "KDDTest+.txt",
+    "k": 500,
     "unwanted_columns": [
         ],
     "categorical_columns": [

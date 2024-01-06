@@ -28,8 +28,8 @@ class Dataset_IoT_Network_Intrusion_Dataset:
         normal_data = self.data.loc[self.data['Label'] == 'Normal'].head(int(nrows/2)).copy()
 
         self.data = pd.concat([anomaly_data, normal_data])
-        self.labels = self.data['Label'].map({'Anomaly': 1, 'Normal': 0})
-        self.data.drop(columns=['Label'], inplace=True)
+        self.labels = self.data['Label'].map({'Anomaly': 1, 'Normal': 0}) # Pandas Series
+        self.data.drop(columns=['Label'], inplace=True) # Pandas DataFrame
         
 
         

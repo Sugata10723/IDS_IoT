@@ -31,5 +31,5 @@ class Dataset_NSL_KDD:
         df = pd.read_csv(self.DATA_FILE_PATH, sep=",", header=None, names=features, nrows=self.config['nrows'])
         df['label'] = df['label'].apply(lambda x: 0 if x == 'normal' else 1)
 
-        self.labels = df['label']
-        self.data = df.drop('label', axis=1)
+        self.labels = df['label'] # Pandas Series 
+        self.data = df.drop('label', axis=1) # Pandas DataFrame
