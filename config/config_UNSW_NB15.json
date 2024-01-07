@@ -3,16 +3,16 @@
     "name_dataset": "UNSW-NB15_1.csv",
     "k": 500,
     "unwanted_columns": [
-      "dstip", 
-      "srcip",
       "attack_cat",
-      "dsport",
-      "sport"
+      "dstip", 
+      "srcip"
       ],
     "categorical_columns": [
       "proto",
       "service",
-      "state"
+      "state",
+      "sport",
+      "dsport"
     ]
 }
       

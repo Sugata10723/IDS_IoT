@@ -2,6 +2,8 @@ import pandas as pd
 from zipfile import ZipFile
 import os
 import json
+import numpy as np
+from sklearn.impute import SimpleImputer
 
 class Dataset_IoT_Network_Intrusion_Dataset:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -28,6 +30,17 @@ class Dataset_IoT_Network_Intrusion_Dataset:
         normal_data = self.data.loc[self.data['Label'] == 'Normal'].head(int(nrows/2)).copy()
 
         self.data = pd.concat([anomaly_data, normal_data])
+
+        #　不用なカラムを削除
+        self.data.drop(columns=self.config["unwanted_columns"], inplace=True)
+        
+        # infのある行を削除
+        inf_rows = self.data.isin([np.inf, -np.inf]).any(axis=1)
+        if inf_rows.sum() > 0:
+            print(f"Number of rows with inf: {inf_rows.sum()}")
+        self.data = self.data[~inf_rows]
+        self.data.reset_index(drop=True, inplace=True)
+
         self.labels = self.data['Label'].map({'Anomaly': 1, 'Normal': 0}) # Pandas Series
         self.data.drop(columns=['Label'], inplace=True) # Pandas DataFrame
         

@@ -1,4 +1,5 @@
 import time
+import plotter
 from model import AnomalyDetector
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
@@ -17,6 +18,7 @@ class Experiment:
         self.f1 = None
         self.fit_time = None
         self.evaluate_time = None
+        self.prediction = None # for plot
 
     def split_data(self, test_size=0.3, random_state=42):
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
@@ -32,11 +34,11 @@ class Experiment:
 
     def evaluate(self):
         start_time = time.perf_counter()
-        y_pred = self.model.predict(self.X_test) # X_test: Panda DataFrame
+        self.prediction = self.model.predict(self.X_test) # X_test: Panda DataFrame
         self.evaluate_time = time.perf_counter() - start_time
         
-        self.accuracy = accuracy_score(self.y_test, y_pred)
-        self.f1 = f1_score(self.y_test, y_pred, average='weighted') # 2値分類問題だが、y_predに-1が含まれるためweightedを使用
+        self.accuracy = accuracy_score(self.y_test, self.prediction)
+        self.f1 = f1_score(self.y_test, self.prediction, average='weighted') # 2値分類問題だが、y_predに-1が含まれるためweightedを使用
 
     def print_results(self):
         print('Fit time: {:.4f}'.format(self.fit_time))
@@ -54,6 +56,8 @@ class Experiment:
         self.fit()
         self.evaluate()
         self.print_results()
+        plotter.plot_results(self.X_test, self.y_test, self.prediction, self.config)
+        plotter.plot_confusion_matrix(self.y_test, self.prediction)
 
 
 

@@ -7,6 +7,7 @@ import xgboost as xgb
 from sklearn.decomposition import PCA
 from scipy.spatial import distance
 import sklearn.preprocessing as preprocessing
+import plotter 
 
 
 class AnomalyDetector:
@@ -23,6 +24,9 @@ class AnomalyDetector:
         self.sampled_normal = None
         self.iforest_attack = None
         self.iforest_normal = None
+        # プロットのため
+        self.attack_data = None
+        self.normal_data = None
 
     def splitsubsystem(self, X, y):
         attack_indices = np.where(y == 1)[0]
@@ -43,6 +47,7 @@ class AnomalyDetector:
         pca = PCA(n_components=20) # 20次元に圧縮
         data_pca = pca.fit_transform(remaining_data)
         data_fs = np.concatenate([data_pca, data_fi], axis=1)
+        #data_fs = data_fi
         return data_fs, pca, important_features
 
     def get_nearest_points(self, data, kmeans):
@@ -77,11 +82,11 @@ class AnomalyDetector:
         # サブシステムに分割 入力：ndarray　出力：ndarray
         raw_attack_data, y_attack, raw_normal_data, y_normal = self.splitsubsystem(X, y)
         # 特徴量選択 入力：ndarray　出力：ndarray
-        attack_data, self.pca_attack, self.important_features_attack = self.feature_selection(raw_attack_data, y_attack)
-        normal_data, self.pca_normal, self.important_features_normal = self.feature_selection(raw_normal_data, y_normal)
+        self.attack_data, self.pca_attack, self.important_features_attack = self.feature_selection(raw_attack_data, y_attack)
+        self.normal_data, self.pca_normal, self.important_features_normal = self.feature_selection(raw_normal_data, y_normal)
         # クラスタリング 入力：ndarray　出力：ndarray
-        self.sampled_attack = self.make_cluster(attack_data, self.k)
-        self.sampled_normal = self.make_cluster(normal_data, self.k)
+        self.sampled_attack = self.make_cluster(self.attack_data, self.k)
+        self.sampled_normal = self.make_cluster(self.normal_data, self.k)
     
         ## training 入力：ndarray
         self.iforest_attack = IsolationForest(n_estimators=50, max_samples=min(100, self.k)).fit(self.sampled_attack)
@@ -103,10 +108,14 @@ class AnomalyDetector:
         X_important_attack = X[:, self.important_features_attack]
         X_pca_attack = self.pca_attack.transform(X[:, np.delete(np.arange(X.shape[1]), self.important_features_attack)])
         X_attack = np.concatenate([X_important_attack, X_pca_attack], axis=1)
+        plotter.plot_sweetviz(pd.DataFrame(self.attack_data), pd.DataFrame(X_attack))
+        #X_attack = X_important_attack
 
         X_important_normal = X[:, self.important_features_normal]
         X_pca_normal = self.pca_normal.transform(X[:, np.delete(np.arange(X.shape[1]), self.important_features_normal)])
         X_normal = np.concatenate([X_important_normal, X_pca_normal], axis=1)
+        plotter.plot_sweetviz(pd.DataFrame(self.normal_data), pd.DataFrame(X_normal))
+        #X_normal = X_important_normal
 
         ## predict
         attack_results = self.iforest_attack.predict(X_attack)
