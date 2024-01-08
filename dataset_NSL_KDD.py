@@ -3,6 +3,13 @@ import os
 import json
 from scipy.io import arff
 
+#################################################################################
+# Dataset_NSL_KDD
+# 最終的な変換後の特徴量数は120
+# duration, protocol_type, service, flagはカテゴリカル変数であり、One-Hotエンコーディングを行う
+# difficultyは不要なカラムとして削除する
+#################################################################################
+
 class Dataset_NSL_KDD:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 

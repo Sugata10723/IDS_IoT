@@ -11,10 +11,12 @@ import plotter
 
 
 class AnomalyDetector:
-    def __init__(self, k, categorical_columns):
+    def __init__(self, k, n_fi, n_pca, categorical_columns):
         self.k = k
+        self.n_fi = n_fi
+        self.n_pca = n_pca
         self.categorical_columns = categorical_columns
-        self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
+        self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='error')
         self.mm = preprocessing.MinMaxScaler()
         self.important_features_attack = None
         self.important_features_normal = None
@@ -38,16 +40,16 @@ class AnomalyDetector:
         xgb_model = xgb.XGBRegressor() # xgboostを使用
         xgb_model.fit(data, y)
         feature_importances = xgb_model.feature_importances_
-        important_features = np.argsort(feature_importances)[-30:] # 30個の特徴量を選択
+        important_features = np.argsort(feature_importances)[-self.n_fi:] # argsortは昇順なので、最後からn_fi個を取得
         data_fi = data[:, important_features]
 
         # 重要な特徴量を除いた特徴量からPCAで特徴抽出
         remaining_features = np.delete(np.arange(data.shape[1]), important_features)
         remaining_data = data[:, remaining_features]
-        pca = PCA(n_components=20) # 20次元に圧縮
+        pca = PCA(n_components=self.n_pca)
         data_pca = pca.fit_transform(remaining_data)
         data_fs = np.concatenate([data_pca, data_fi], axis=1)
-        #data_fs = data_fi
+
         return data_fs, pca, important_features
 
     def get_nearest_points(self, data, kmeans):
@@ -62,11 +64,11 @@ class AnomalyDetector:
         nearest_points = nearest_points[:, :-1]  # 'cluster' columnを削除
         return nearest_points
 
-    def make_cluster(self, data, k):
+    def make_cluster(self, data):
         if len(data) < self.k: # サンプル数がkより小さい場合はそのまま返す
             return data
         else:
-            kmeans = KMeans(n_clusters=k, n_init=10)
+            kmeans = KMeans(n_clusters=self.k, n_init=10)
             clusters = kmeans.fit_predict(data)
             data = np.column_stack((data, clusters))  # 'cluster' columnを追加
             data_sampled = self.get_nearest_points(data, kmeans)
@@ -74,6 +76,7 @@ class AnomalyDetector:
 
     def fit(self, X, y):
         ## Preprocessing X: Pandas DataFrame, y: NumPy Array
+
         # one-hotエンコード 入力：DataFrame　出力：ndarray
         X_ohe = self.ohe.fit_transform(X[self.categorical_columns])
         X = np.concatenate([X.drop(columns=self.categorical_columns).values, X_ohe], axis=1)
@@ -85,8 +88,8 @@ class AnomalyDetector:
         self.attack_data, self.pca_attack, self.important_features_attack = self.feature_selection(raw_attack_data, y_attack)
         self.normal_data, self.pca_normal, self.important_features_normal = self.feature_selection(raw_normal_data, y_normal)
         # クラスタリング 入力：ndarray　出力：ndarray
-        self.sampled_attack = self.make_cluster(self.attack_data, self.k)
-        self.sampled_normal = self.make_cluster(self.normal_data, self.k)
+        self.sampled_attack = self.make_cluster(self.attack_data)
+        self.sampled_normal = self.make_cluster(self.normal_data)
     
         ## training 入力：ndarray
         self.iforest_attack = IsolationForest(n_estimators=50, max_samples=min(100, self.k)).fit(self.sampled_attack)
@@ -99,6 +102,7 @@ class AnomalyDetector:
         total_points = len(X)
 
         ## preprocessing
+
         # one-hotエンコード　入力：DataFrame　出力：ndarray
         X_ohe = self.ohe.transform(X[self.categorical_columns])
         X = np.concatenate([X.drop(columns=self.categorical_columns).values, X_ohe], axis=1)
@@ -108,14 +112,10 @@ class AnomalyDetector:
         X_important_attack = X[:, self.important_features_attack]
         X_pca_attack = self.pca_attack.transform(X[:, np.delete(np.arange(X.shape[1]), self.important_features_attack)])
         X_attack = np.concatenate([X_important_attack, X_pca_attack], axis=1)
-        plotter.plot_sweetviz(pd.DataFrame(self.attack_data), pd.DataFrame(X_attack))
-        #X_attack = X_important_attack
 
         X_important_normal = X[:, self.important_features_normal]
         X_pca_normal = self.pca_normal.transform(X[:, np.delete(np.arange(X.shape[1]), self.important_features_normal)])
         X_normal = np.concatenate([X_important_normal, X_pca_normal], axis=1)
-        plotter.plot_sweetviz(pd.DataFrame(self.normal_data), pd.DataFrame(X_normal))
-        #X_normal = X_important_normal
 
         ## predict
         attack_results = self.iforest_attack.predict(X_attack)

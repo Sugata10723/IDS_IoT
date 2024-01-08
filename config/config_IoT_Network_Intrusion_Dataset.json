@@ -1,7 +1,6 @@
 {
     "nrows": 10000,
     "name_dataset": "IoT_Network_Intrusion_Dataset",
-    "k": 500,
     "unwanted_columns": [
         "Cat",
         "Sub_Cat",
@@ -9,8 +8,6 @@
         "Flow_ID"
     ],
     "categorical_columns": [
-        "Src_IP",
-        "Dst_IP",
         "Protocol",
         "Fwd_PSH_Flags",
         "Bwd_PSH_Flags",

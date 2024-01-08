@@ -1,5 +1,7 @@
 import time
 import plotter
+import numpy as np
+import matplotlib.pyplot as plt
 from model import AnomalyDetector
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
@@ -18,7 +20,8 @@ class Experiment:
         self.f1 = None
         self.fit_time = None
         self.evaluate_time = None
-        self.prediction = None # for plot
+        # プロットのため
+        self.prediction = None
 
     def split_data(self, test_size=0.3, random_state=42):
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
@@ -46,9 +49,11 @@ class Experiment:
         print('Accuracy: {:.4f}'.format(self.accuracy))
         print('F1: {:.4f}'.format(self.f1))
 
-    def run(self):
+    def run(self, k, n_fi, n_pca):
         model_params = {
-            'k': self.config['k'],
+            'k': k,
+            'n_fi': n_fi,
+            'n_pca': n_pca,
             'categorical_columns': self.config['categorical_columns']
         }
         self.model = AnomalyDetector(**model_params)
@@ -58,6 +63,59 @@ class Experiment:
         self.print_results()
         plotter.plot_results(self.X_test, self.y_test, self.prediction, self.config)
         plotter.plot_confusion_matrix(self.y_test, self.prediction)
+
+    def grid_run(self, k, max_feature, dif):
+        n_fis = list(range(1, max_feature + 1, dif))
+        n_pcas = list(range(1, max_feature + 1, dif))
+        param_grid = [{'n_fi': n_fi, 'n_pca': n_pca} for n_fi in n_fis for n_pca in n_pcas if n_fi + n_pca <= max_feature]
+        f1_scores = np.zeros((max_feature, max_feature))
+        accuracy_scores = np.zeros((max_feature, max_feature))
+
+        for params in param_grid:
+            print(params)
+            self.run(k, **params)
+            print("-----------------------------------------------------")
+            f1_scores[params['n_fi'] - 1, params['n_pca'] - 1] = self.f1
+            accuracy_scores[params['n_fi'] - 1, params['n_pca'] - 1] = self.accuracy
+
+        # F1スコアのヒートマップをプロット
+        plt.figure(figsize=(10, 10))
+        plt.imshow(f1_scores, cmap='hot', interpolation='nearest', origin='lower', vmax=1)
+        plt.colorbar(label='F1 Score')
+        plt.xlabel('n_pcas')
+        plt.ylabel('n_fis')
+        plt.title('F1 Score Heatmap')
+        plt.show()
+
+        # Accuracyのヒートマップをプロット
+        plt.figure(figsize=(10, 10))
+        plt.imshow(accuracy_scores, cmap='hot', interpolation='nearest', origin='lower', vmax=1)
+        plt.colorbar(label='Accuracy')
+        plt.xlabel('n_pcas')
+        plt.ylabel('n_fis')
+        plt.title('Accuracy Heatmap')
+        plt.show()
+
+    def k_run(self, min_k, max_k, dif, n_fi, n_pca):
+        aucs = []
+        f1s = []
+        for i in range(min_k, max_k + dif, dif):
+            self.run(i, n_fi=n_fi, n_pca=n_pca)
+            aucs.append(self.accuracy)
+            f1s.append(self.f1)
+
+        plt.figure(figsize=(10, 7))
+        plt.plot(range(min_k, max_k + dif, dif), aucs, label='AUC') 
+        plt.plot(range(min_k, max_k + dif, dif), f1s, label='F1 Score')
+
+        plt.title('AUC and F1 Score over iterations')
+        plt.xlabel('Iterations')
+        plt.ylabel('Score')
+        plt.legend()
+
+        plt.show()
+
+
 
 
 
