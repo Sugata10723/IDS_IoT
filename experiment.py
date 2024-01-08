@@ -3,32 +3,22 @@ import plotter
 import numpy as np
 import matplotlib.pyplot as plt
 from model import AnomalyDetector
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 
 class Experiment:
-    def __init__(self, data, labels, config):
-        self.data = data # Pandas DataFrame
-        self.labels = labels # Pandas Series
+    def __init__(self, X_train, X_test, y_train, y_test, config):
+        self.X_train = X_train # Pandas DataFrame
+        self.X_test = X_test # Pandas DataFrame
+        self.y_train = y_train # Pandas Series
+        self.y_test = y_test # Pandas Series
         self.config = config
         self.model = None
-        self.X_train = None # Pandas DataFrame
-        self.X_test = None # Pandas DataFrame
-        self.y_train = None # Pandas Series
-        self.y_test = None # Pandas Series
         self.accuracy = None
         self.f1 = None
         self.fit_time = None
         self.evaluate_time = None
         # プロットのため
         self.prediction = None
-
-    def split_data(self, test_size=0.3, random_state=42):
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            self.data, self.labels, test_size=test_size, random_state=random_state
-        )
-        self.y_train = self.y_train.values # Pandas Series -> NumPy Array
-        self.y_test = self.y_test.values # Pandas Series -> NumPy Array
 
     def fit(self):
         start_time = time.perf_counter()
@@ -57,12 +47,11 @@ class Experiment:
             'categorical_columns': self.config['categorical_columns']
         }
         self.model = AnomalyDetector(**model_params)
-        self.split_data()
         self.fit()
         self.evaluate()
         self.print_results()
-        plotter.plot_results(self.X_test, self.y_test, self.prediction, self.config)
-        plotter.plot_confusion_matrix(self.y_test, self.prediction)
+        #plotter.plot_results(self.X_test, self.y_test, self.prediction, self.config)
+        #plotter.plot_confusion_matrix(self.y_test, self.prediction)
 
     def grid_run(self, k, max_feature, dif):
         n_fis = list(range(1, max_feature + 1, dif))
@@ -73,7 +62,7 @@ class Experiment:
 
         for params in param_grid:
             print(params)
-            self.run(k, **params)
+            self.run(k, n_fi=params['n_fi'], n_pca=params['n_pca'])
             print("-----------------------------------------------------")
             f1_scores[params['n_fi'] - 1, params['n_pca'] - 1] = self.f1
             accuracy_scores[params['n_fi'] - 1, params['n_pca'] - 1] = self.accuracy

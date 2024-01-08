@@ -16,7 +16,7 @@ class AnomalyDetector:
         self.n_fi = n_fi
         self.n_pca = n_pca
         self.categorical_columns = categorical_columns
-        self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='error')
+        self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
         self.mm = preprocessing.MinMaxScaler()
         self.important_features_attack = None
         self.important_features_normal = None

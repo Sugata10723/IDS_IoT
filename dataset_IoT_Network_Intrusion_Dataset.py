@@ -3,11 +3,13 @@ from zipfile import ZipFile
 import os
 import json
 import numpy as np
+from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
 
 #################################################################################
 # Dataset_IoT_Network_Intrusion_Dataset
-# 最終的な変換後の特徴量数は
+# 元はAttackが多いデータセット
+# 最終的な変換後の特徴量数は87
 # Src_IPとDst_IPを整数値に変換
 # infがある行があるので削除する
 #################################################################################
@@ -15,16 +17,19 @@ from sklearn.impute import SimpleImputer
 class Dataset_IoT_Network_Intrusion_Dataset:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-    def __init__(self, config_filename='config.json'):
-        self.CONFIG_FILE_PATH = os.path.join(self.BASE_DIR, 'config', config_filename)
+    def __init__(self):
+        self.CONFIG_FILE_PATH = os.path.join(self.BASE_DIR, 'config', 'config_IoT_Network_Intrusion_Dataset.json')
         self.config = self.load_config()
-        self.filename = self.config['name_dataset']
-
-        self.DATA_CSV_FILE_PATH = f"{self.BASE_DIR}/data/{self.filename}/{self.filename}.csv"
-        
+        self.DATA_CSV_FILE_PATH = f"{self.BASE_DIR}/data/IoT_Network_Intrusion_Dataset/IoT_Network_Intrusion_Dataset.csv"
         self.data = None
+        self.X_train = None
+        self.X_test = None
+        self.y_train = None
+        self.y_test = None
         self.labels = None
+
         self.load_data()
+        self.split_data()
 
     def load_config(self):
         with open(self.CONFIG_FILE_PATH, 'r') as f:
@@ -33,13 +38,15 @@ class Dataset_IoT_Network_Intrusion_Dataset:
     def split_ip(self, ip):
         return list(map(int, ip.split('.')))
 
+    def split_data(self, test_size=0.3, random_state=42):
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.data, self.labels, test_size=test_size, random_state=random_state)
+        self.y_train = self.y_train.values # Pandas Series -> NumPy Array
+        self.y_test = self.y_test.values # Pandas Series -> NumPy Array
+
     def load_data(self):
         self.data = pd.read_csv(self.DATA_CSV_FILE_PATH)
         nrows = self.config['nrows']
-        anomaly_data = self.data.loc[self.data['Label'] == 'Anomaly'].head(int(nrows/2)).copy()
-        normal_data = self.data.loc[self.data['Label'] == 'Normal'].head(int(nrows/2)).copy()
-
-        self.data = pd.concat([anomaly_data, normal_data])
+        self.data = self.data.head(nrows)
 
         #　不用なカラムを削除
         self.data.drop(columns=self.config["unwanted_columns"], inplace=True)
@@ -59,6 +66,9 @@ class Dataset_IoT_Network_Intrusion_Dataset:
 
         self.labels = self.data['Label'].map({'Anomaly': 1, 'Normal': 0}) # Pandas Series
         self.data.drop(columns=['Label'], inplace=True) # Pandas DataFrame
+
+    def get_data(self):
+        return self.X_train, self.X_test, self.y_train, self.y_test, self.config
         
 
         

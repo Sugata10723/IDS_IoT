@@ -1,0 +1,12 @@
+{
+    "nrows": 10000,
+    "unwanted_columns": [
+      "attack_cat"
+      ],
+    "categorical_columns": [
+      "proto",
+      "service",
+      "state"
+    ]
+}
+      
