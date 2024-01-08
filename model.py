@@ -9,6 +9,16 @@ from scipy.spatial import distance
 import sklearn.preprocessing as preprocessing
 import plotter 
 
+#################################################################################   
+# パラメータ
+# k: クラスタ数
+# n_fi: 特徴量選択における重要な特徴量の数
+# n_pca: 特徴量選択におけるPCAによる特徴抽出の次元数
+# n_estimators: Isolation Forestの決定木の数
+# max_samples: Isolation Forestのサンプル数
+# contamination: Isolation Forestの外れ値の割合
+#################################################################################
+
 
 class AnomalyDetector:
     def __init__(self, k, n_fi, n_pca, categorical_columns):
@@ -16,7 +26,7 @@ class AnomalyDetector:
         self.n_fi = n_fi
         self.n_pca = n_pca
         self.categorical_columns = categorical_columns
-        self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='error')
+        self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
         self.mm = preprocessing.MinMaxScaler()
         self.important_features_attack = None
         self.important_features_normal = None
@@ -81,7 +91,7 @@ class AnomalyDetector:
         # one-hotエンコード 入力：DataFrame　出力：ndarray
         X_ohe = self.ohe.fit_transform(X[self.categorical_columns])
         X = np.concatenate([X.drop(columns=self.categorical_columns).values, X_ohe], axis=1)
-        self.max_feature = X.shape[1]
+        self.max_feature = X.shape[1] # プロットのために記録
         # 正規化 入力：ndarray　出力：ndarray
         X = self.mm.fit_transform(X)
         # サブシステムに分割 入力：ndarray　出力：ndarray

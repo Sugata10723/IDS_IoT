@@ -53,12 +53,12 @@ class Dataset_UNSW_NB15:
         self.data_test = pd.read_csv(self.DATA_TEST_FILE_PATH)
 
         # 指定した行数だけ読み込む
-        if self.nrows > self.X_train.shape[0]:
-            self.nrows = self.X_train.shape[0]
-        self.X_train = self.X_train.iloc[:self.nrows]
-        if int(self.nrows * 0.3) > self.X_test.shape[0]:
-            self.nrows = self.X_test.shape[0]
-        self.X_test = self.X_test.iloc[:int(self.nrows * 0.3)]
+        if self.nrows > self.data_train.shape[0]:
+            self.nrows = self.data_train.shape[0]
+        self.data_train = self.data_train.iloc[:self.nrows]
+        if int(self.nrows * 0.3) > self.data_test.shape[0]:
+            self.nrows = self.data_test.shape[0]
+        self.data_test = self.data_test.iloc[:int(self.nrows * 0.3)]
 
         self.X_train, self.y_train = self.preprocess(self.data_train)
         self.X_test, self.y_test = self.preprocess(self.data_test)

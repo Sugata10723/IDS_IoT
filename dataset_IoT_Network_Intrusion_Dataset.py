@@ -46,13 +46,11 @@ class Dataset_IoT_Network_Intrusion_Dataset:
 
     def load_data(self):
         self.data = pd.read_csv(self.DATA_CSV_FILE_PATH)
-        nrows = self.config['nrows']
-        self.data = self.data.head(nrows)
 
         # 指定した行数だけ読み込む
         if self.nrows > self.data.shape[0]:
             self.nrows = self.data.shape[0]
-        self.data = self.data.iloc[:nrows]
+        self.data = self.data.iloc[:self.nrows]
 
         #　不用なカラムを削除
         self.data.drop(columns=self.config["unwanted_columns"], inplace=True)

@@ -6,18 +6,5 @@
         "Flow_ID"
     ],
     "categorical_columns": [
-        "Protocol",
-        "Fwd_PSH_Flags",
-        "Bwd_PSH_Flags",
-        "Fwd_URG_Flags",
-        "Bwd_URG_Flags",
-        "FIN_Flag_Cnt",
-        "SYN_Flag_Cnt",
-        "RST_Flag_Cnt",
-        "PSH_Flag_Cnt",
-        "ACK_Flag_Cnt",
-        "URG_Flag_Cnt",
-        "CWE_Flag_Count",
-        "ECE_Flag_Cnt"
     ]
 }

@@ -172,13 +172,43 @@ def plot_pca_components_ave():
     plt.tight_layout()
     plt.show()
 
-def plot_feature_importances(feature_importances):
-    n_features = len(feature_importances)
-    plt.figure(figsize=(10, 7))
-    plt.bar(range(n_features), feature_importances)
-    plt.title('Feature Importances')
-    plt.show()
+def plot_feature_importances(X, y, categorical_columns, top_n=10):
+    import xgboost as xgb
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from sklearn.preprocessing import OneHotEncoder
 
+    # OneHotEncoderのインスタンスを作成
+    ohe = OneHotEncoder(sparse=False, categories='auto', handle_unknown='ignore')
+
+    # one-hotエンコード 入力：DataFrame　出力：ndarray
+    X_ohe = ohe.fit_transform(X[categorical_columns])
+
+    # エンコード後の特徴量名を取得
+    feature_names = ohe.get_feature_names_out(categorical_columns)
+
+    # エンコードされていない特徴量名と結合
+    feature_names = np.concatenate([X.drop(columns=categorical_columns).columns, feature_names])
+
+    # エンコードされたデータと元のデータを結合
+    X = np.concatenate([X.drop(columns=categorical_columns).values, X_ohe], axis=1)
+
+    # FIを用いて特徴量選択
+    xgb_model = xgb.XGBRegressor() # xgboostを使用
+    xgb_model.fit(X, y)
+    feature_importances = xgb_model.feature_importances_
+
+    # 特徴量の重要度が高い上位N個を取得
+    indices = np.argsort(feature_importances)[-top_n:]
+    sorted_feature_names = [feature_names[i] for i in indices]
+    sorted_feature_importances = feature_importances[indices]
+
+    plt.figure(figsize=(10, 7))
+    plt.barh(range(len(sorted_feature_importances)), sorted_feature_importances, tick_label=sorted_feature_names)
+    plt.title('Feature Importances')
+    plt.xlabel('Score')
+    plt.ylabel('Feature')
+    plt.show()
 
 def plot_sweetviz(X_train, X_test):
     report = sv.compare([X_train, "Train Data"], [X_test, "Test Data"])

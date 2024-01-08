@@ -69,7 +69,7 @@ class Dataset_UNSW_NB15_1:
         # 指定した行数だけ読み込む
         if self.nrows > self.data.shape[0]:
             self.nrows = self.data.shape[0]
-        self.data = self.data.iloc[:nrows]
+        self.data = self.data.iloc[:self.nrows]
 
         # 不要なカラムを削除
         self.data.drop(columns=self.config['unwanted_columns'], inplace=True)
