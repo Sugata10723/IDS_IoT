@@ -1,6 +1,4 @@
 {
-    "nrows": 10000,
-    "name_dataset": "UNSW-NB15_1.csv",
     "unwanted_columns": [
       "attack_cat"
       ],

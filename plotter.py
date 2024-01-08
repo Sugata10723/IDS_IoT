@@ -172,6 +172,14 @@ def plot_pca_components_ave():
     plt.tight_layout()
     plt.show()
 
+def plot_feature_importances(feature_importances):
+    n_features = len(feature_importances)
+    plt.figure(figsize=(10, 7))
+    plt.bar(range(n_features), feature_importances)
+    plt.title('Feature Importances')
+    plt.show()
+
+
 def plot_sweetviz(X_train, X_test):
     report = sv.compare([X_train, "Train Data"], [X_test, "Test Data"])
     report.show_notebook()

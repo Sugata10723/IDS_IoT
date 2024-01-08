@@ -16,7 +16,7 @@ class AnomalyDetector:
         self.n_fi = n_fi
         self.n_pca = n_pca
         self.categorical_columns = categorical_columns
-        self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
+        self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='error')
         self.mm = preprocessing.MinMaxScaler()
         self.important_features_attack = None
         self.important_features_normal = None
@@ -26,6 +26,7 @@ class AnomalyDetector:
         self.sampled_normal = None
         self.iforest_attack = None
         self.iforest_normal = None
+        self.max_feature = None
         # プロットのため
         self.attack_data = None
         self.normal_data = None
@@ -80,6 +81,7 @@ class AnomalyDetector:
         # one-hotエンコード 入力：DataFrame　出力：ndarray
         X_ohe = self.ohe.fit_transform(X[self.categorical_columns])
         X = np.concatenate([X.drop(columns=self.categorical_columns).values, X_ohe], axis=1)
+        self.max_feature = X.shape[1]
         # 正規化 入力：ndarray　出力：ndarray
         X = self.mm.fit_transform(X)
         # サブシステムに分割 入力：ndarray　出力：ndarray

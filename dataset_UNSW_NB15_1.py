@@ -16,7 +16,8 @@ from sklearn.model_selection import train_test_split
 class Dataset_UNSW_NB15_1:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-    def __init__(self):
+    def __init__(self, nrows):
+        self.nrows = nrows
         self.CONFIG_FILE_PATH = os.path.join(self.BASE_DIR, 'config', 'config_UNSW_NB15_1.json')
         self.config = self.load_config()
         self.DATA_FILE_PATH = f"{self.BASE_DIR}/data/UNSW_NB15/UNSW-NB15_1.csv"
@@ -60,13 +61,14 @@ class Dataset_UNSW_NB15_1:
         self.y_test = self.y_test.values # Pandas Series -> NumPy Array
 
     def load_data(self):
-        nrows = int(self.config['nrows'])
         self.data = pd.read_csv(self.DATA_FILE_PATH)
         features = pd.read_csv(self.DATA_FEATURES_FILE_PATH, index_col='No.')
         features = features['Name']
         self.data.columns = features
 
         # 指定した行数だけ読み込む
+        if self.nrows > self.data.shape[0]:
+            self.nrows = self.data.shape[0]
         self.data = self.data.iloc[:nrows]
 
         # 不要なカラムを削除

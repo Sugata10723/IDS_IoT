@@ -5,7 +5,10 @@ from scipy.io import arff
 
 #################################################################################
 # Dataset_NSL_KDD
-# 最終的な変換後の特徴量数は120
+# trainデータ数: 125973
+# testデータ数: 22544
+# 特徴量数: 41
+# 最終的な変換後の特徴量数は
 # duration, protocol_type, service, flagはカテゴリカル変数であり、One-Hotエンコーディングを行う
 # difficultyは不要なカラムとして削除する
 #################################################################################
@@ -13,13 +16,17 @@ from scipy.io import arff
 class Dataset_NSL_KDD:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-    def __init__(self, config_filename=None):
-        self.CONFIG_FILE_PATH = f"{self.BASE_DIR}/config/{config_filename}"
+    def __init__(self, nrows):
+        self.nrows = nrows
+        self.CONFIG_FILE_PATH = f"{self.BASE_DIR}/config/config_NSL_KDD.json"
         self.config = self.load_config()
-        self.filename = self.config['name_dataset']
-        self.DATA_FILE_PATH = f"{self.BASE_DIR}/data/NSL-KDD/{self.filename}"
-        self.data = None
-        self.labels = None
+        self.DATA_TRAIN_FILE_PATH = f"{self.BASE_DIR}/data/NSL-KDD/KDDTrain+.txt"
+        self.DATA_TEST_FILE_PATH = f"{self.BASE_DIR}/data/NSL-KDD/KDDTest+.txt"
+        self.X_train = None
+        self.X_test = None
+        self.y_train = None
+        self.y_test = None
+
         self.load_data()
 
     def load_config(self):
@@ -35,8 +42,24 @@ class Dataset_NSL_KDD:
           "dst_host_srv_serror_rate","dst_host_rerror_rate","dst_host_srv_rerror_rate","label","difficulty"]
         
         # Load data from CSV file
-        df = pd.read_csv(self.DATA_FILE_PATH, sep=",", header=None, names=features, nrows=self.config['nrows'])
-        df['label'] = df['label'].apply(lambda x: 0 if x == 'normal' else 1)
+        self.X_train = pd.read_csv(self.DATA_TRAIN_FILE_PATH, sep=",", header=None, names=features)
+        self.X_test = pd.read_csv(self.DATA_TEST_FILE_PATH, sep=",", header=None, names=features)
+
+        # 指定した行数だけ読み込む
+        if self.nrows > self.X_train.shape[0]:
+            self.nrows = self.X_train.shape[0]
+        self.X_train = self.X_train.iloc[:self.nrows]
+        if int(self.nrows * 0.3) > self.X_test.shape[0]:
+            self.nrows = self.X_test.shape[0]
+        self.X_test = self.X_test.iloc[:int(self.nrows * 0.3)]
+
+        self.X_train['label'] = self.X_train['label'].apply(lambda x: 0 if x == 'normal' else 1)
+        self.X_test['label'] = self.X_test['label'].apply(lambda x: 0 if x == 'normal' else 1)
         
-        self.labels = df['label'] # Pandas Series 
-        self.data = df.drop('label', axis=1) # Pandas DataFrame
+        self.y_train = self.X_train['label'] # Pandas Series 
+        self.X_train = self.X_train.drop('label', axis=1) # Pandas DataFrame
+        self.y_test = self.X_test['label'] # Pandas Series
+        self.X_test = self.X_test.drop('label', axis=1) # Pandas DataFrame
+
+    def get_data(self):
+        return self.X_train, self.X_test, self.y_train, self.y_test, self.config

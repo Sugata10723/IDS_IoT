@@ -17,7 +17,8 @@ from sklearn.impute import SimpleImputer
 class Dataset_IoT_Network_Intrusion_Dataset:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-    def __init__(self):
+    def __init__(self, nrows):
+        self.nrows = nrows
         self.CONFIG_FILE_PATH = os.path.join(self.BASE_DIR, 'config', 'config_IoT_Network_Intrusion_Dataset.json')
         self.config = self.load_config()
         self.DATA_CSV_FILE_PATH = f"{self.BASE_DIR}/data/IoT_Network_Intrusion_Dataset/IoT_Network_Intrusion_Dataset.csv"
@@ -47,6 +48,11 @@ class Dataset_IoT_Network_Intrusion_Dataset:
         self.data = pd.read_csv(self.DATA_CSV_FILE_PATH)
         nrows = self.config['nrows']
         self.data = self.data.head(nrows)
+
+        # 指定した行数だけ読み込む
+        if self.nrows > self.data.shape[0]:
+            self.nrows = self.data.shape[0]
+        self.data = self.data.iloc[:nrows]
 
         #　不用なカラムを削除
         self.data.drop(columns=self.config["unwanted_columns"], inplace=True)

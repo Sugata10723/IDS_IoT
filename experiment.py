@@ -52,8 +52,15 @@ class Experiment:
         self.print_results()
         #plotter.plot_results(self.X_test, self.y_test, self.prediction, self.config)
         #plotter.plot_confusion_matrix(self.y_test, self.prediction)
+        #plotter.plot_feature_importances(self.model.important_features_normal)
 
-    def grid_run(self, k, max_feature, dif):
+    def grid_run(self, k, dif):
+        # max_featureを取得
+        self.model = AnomalyDetector(k=k, n_fi=1, n_pca=1, categorical_columns=self.config['categorical_columns'])
+        self.model.fit(self.X_train, self.y_train)
+        max_feature = self.model.max_feature
+        print(f'max_feature: {max_feature}')
+
         n_fis = list(range(1, max_feature + 1, dif))
         n_pcas = list(range(1, max_feature + 1, dif))
         param_grid = [{'n_fi': n_fi, 'n_pca': n_pca} for n_fi in n_fis for n_pca in n_pcas if n_fi + n_pca <= max_feature]
