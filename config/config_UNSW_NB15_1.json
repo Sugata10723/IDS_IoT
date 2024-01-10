@@ -1,7 +1,8 @@
 {
+    "fix_imbalance": true,
     "unwanted_columns": [
       "attack_cat"
-      ],
+    ],
     "categorical_columns": [
       "proto",
       "service",

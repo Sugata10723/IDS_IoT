@@ -74,24 +74,9 @@ class Experiment:
             print("-----------------------------------------------------")
             f1_scores[params['n_fi'] - 1, params['n_pca'] - 1] = self.f1
             accuracy_scores[params['n_fi'] - 1, params['n_pca'] - 1] = self.accuracy
-
-        # F1スコアのヒートマップをプロット
-        plt.figure(figsize=(10, 10))
-        plt.imshow(f1_scores, cmap='hot', interpolation='nearest', origin='lower', vmax=1)
-        plt.colorbar(label='F1 Score')
-        plt.xlabel('n_pcas')
-        plt.ylabel('n_fis')
-        plt.title('F1 Score Heatmap')
-        plt.show()
-
-        # Accuracyのヒートマップをプロット
-        plt.figure(figsize=(10, 10))
-        plt.imshow(accuracy_scores, cmap='hot', interpolation='nearest', origin='lower', vmax=1)
-        plt.colorbar(label='Accuracy')
-        plt.xlabel('n_pcas')
-        plt.ylabel('n_fis')
-        plt.title('Accuracy Heatmap')
-        plt.show()
+        
+        plotter.plot_heatmap(f1_scores, 'f1 score')
+        plotter.plot_heatmap(accuracy_scores, 'accuracy')
 
     def k_run(self, min_k, max_k, dif, n_fi, n_pca):
         aucs = []
@@ -112,7 +97,6 @@ class Experiment:
         plt.legend()
 
         plt.show()
-
 
 
 

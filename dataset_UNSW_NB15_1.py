@@ -105,16 +105,24 @@ class Dataset_UNSW_NB15_1:
 
         return data
 
+    def cut_data(self, data):
+        data = data.copy()
+        nrows = min(self.nrows, data.shape[0]) # 行数がnrowsよりも少ない場合は、dataをそのまま返す
+        if self.config['fix_imbalance']: # 不均衡データを均衡データにする場合
+            data_0 = data[data['Label'] == 0]
+            data_1 = data[data['Label'] == 1]
+            half_nrows = nrows // 2
+            data = pd.concat([data_0.iloc[:half_nrows], data_1.iloc[:half_nrows]])
+        else: # 不均衡データのまま
+            data = data.iloc[:nrows]
+        return data
+
     def load_data(self):
         self.data = pd.read_csv(self.DATA_FILE_PATH)
         features = pd.read_csv(self.DATA_FEATURES_FILE_PATH, index_col='No.')
         features = features['Name']
         self.data.columns = features
-
-        # 指定した行数だけ読み込む
-        if self.nrows > self.data.shape[0]:
-            self.nrows = self.data.shape[0]
-        self.data = self.data.iloc[:self.nrows]
+        self.data = self.cut_data(self.data)
 
         self.data = self.preprocess(self.data)
         self.labels = self.data['Label'] # Pandas Series

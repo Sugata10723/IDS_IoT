@@ -1,4 +1,5 @@
 {
+    "fix_imbalance": true,
     "unwanted_columns": [
         "Cat",
         "Sub_Cat",
@@ -6,5 +7,6 @@
         "Flow_ID"
     ],
     "categorical_columns": [
+        
     ]
 }
