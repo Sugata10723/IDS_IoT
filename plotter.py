@@ -13,16 +13,23 @@ from umap import UMAP
 import seaborn as sns
 import sweetviz as sv
 
-def plot_cluster(data, data_sampled, title):
+def plot_cluster(attack_data, attack_sampled, normal_data, normal_sampled):
+    from umap import UMAP
+    import matplotlib.pyplot as plt
+    import numpy as np
+
     umap_plot = UMAP(n_components=2)
+    data = np.concatenate([attack_data, normal_data], axis=0)
     # クラスタリング結果をUMAPを使用して2次元にプロット
-    data_umap = pd.DataFrame(umap_plot.fit_transform(data))
-    data_sampled_umap = pd.DataFrame(umap_plot.transform(data_sampled))
+    data_umap = umap_plot.fit_transform(data)
+    attack_sampled_umap = umap_plot.transform(attack_sampled)
+    normal_sampled_umap = umap_plot.transform(normal_sampled)
     plt.figure(figsize=(10, 7))
-    plt.scatter(data_umap.iloc[:, 0], data_umap.iloc[:, 1], label='Data', c='blue', s=10)
-    plt.scatter(data_sampled_umap.iloc[:, 0], data_sampled_umap.iloc[:, 1], label='Centroids', c='green', s=10)
+    plt.scatter(data_umap[:, 0], data_umap[:, 1], c='blue', edgecolor='none', s=10, label='data')
+    plt.scatter(attack_sampled_umap[:, 0], attack_sampled_umap[:, 1], c='red', edgecolor='none', s=10, label='attack_sampled')
+    plt.scatter(normal_sampled_umap[:, 0], normal_sampled_umap[:, 1], c='green', edgecolor='none', s=10, label='normal_sampled')
     plt.legend()
-    plt.title(title)
+    plt.title('sampled data')
     plt.show()
 
 def plot_anomaly_scores(anomaly_scores_a, anomaly_scores_n):

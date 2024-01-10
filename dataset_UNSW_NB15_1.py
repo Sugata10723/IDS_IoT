@@ -60,6 +60,51 @@ class Dataset_UNSW_NB15_1:
         self.y_train = self.y_train.values # Pandas Series -> NumPy Array
         self.y_test = self.y_test.values # Pandas Series -> NumPy Array
 
+
+    def bitwise(self, data):
+        data = data.copy()
+
+        # IPアドレスを32ビットのバイナリ文字列に変換する関数
+        def ip_to_bin(ip):
+            return ''.join([format(int(x), '08b') for x in ip.split('.')])
+
+        # dstipとsrcipを32ビットのバイナリ文字列に変換
+        data['dstip_bin'] = data['dstip'].apply(ip_to_bin)
+        data['srcip_bin'] = data['srcip'].apply(ip_to_bin)
+
+        # バイナリ文字列を個々のビットに分割し、新しい特徴量として追加
+        for i in range(32):
+            data[f'dstip_bit_{i}'] = data['dstip_bin'].apply(lambda x: int(x[i]))
+            data[f'srcip_bit_{i}'] = data['srcip_bin'].apply(lambda x: int(x[i]))
+
+        # バイナリ文字列の特徴量はもう不要なので削除
+        data.drop(columns=['dstip_bin', 'srcip_bin', 'dstip', 'srcip'], inplace=True)
+
+        return data
+
+    def preprocess(self, data):
+        data = data.copy()
+        # 不要なカラムを削除
+        data.drop(columns=self.config['unwanted_columns'], inplace=True)
+
+        # dsportを変換
+        data['dsport'] = data['dsport'].apply(self.convert_to_decimal)
+        # dsportの値が-1の行（すなわち、無効な値を含む行）を削除し、その数をカウント
+        n_invalid_dsport = len(data[data['dsport'] == -1])
+        data = data[data['dsport'] != -1]
+        print(f'Invalid dsport: {n_invalid_dsport}')
+
+        # sportに含まれる文字列を削除
+        is_int = data['sport'].apply(lambda x: isinstance(x, int))
+        data = data[is_int]
+
+        # dstip, srcipをbitwiseに変換
+        data = self.bitwise(data)
+
+        data = data.reset_index() 
+
+        return data
+
     def load_data(self):
         self.data = pd.read_csv(self.DATA_FILE_PATH)
         features = pd.read_csv(self.DATA_FEATURES_FILE_PATH, index_col='No.')
@@ -71,27 +116,7 @@ class Dataset_UNSW_NB15_1:
             self.nrows = self.data.shape[0]
         self.data = self.data.iloc[:self.nrows]
 
-        # 不要なカラムを削除
-        self.data.drop(columns=self.config['unwanted_columns'], inplace=True)
-
-        # dsportを変換
-        self.data['dsport'] = self.data['dsport'].apply(self.convert_to_decimal)
-        # dsportの値が-1の行（すなわち、無効な値を含む行）を削除し、その数をカウント
-        n_invalid_dsport = len(self.data[self.data['dsport'] == -1])
-        self.data = self.data[self.data['dsport'] != -1]
-        print(f'Invalid dsport: {n_invalid_dsport}')
-
-        # sportに含まれる文字列を削除
-        is_int = self.data['sport'].apply(lambda x: isinstance(x, int))
-        self.data = self.data[is_int]
-
-        # dstip, srcipを整数値に変換する
-        self.data['dstip_1'], self.data['dstip_2'], self.data['dstip_3'], self.data['dstip_4'] = zip(*self.data['dstip'].apply(self.split_ip))
-        self.data.drop(columns=['dstip'], inplace=True)
-        self.data['srcip_1'], self.data['srcip_2'], self.data['srcip_3'], self.data['srcip_4'] = zip(*self.data['srcip'].apply(self.split_ip))
-        self.data.drop(columns=['srcip'], inplace=True)
-
-        self.data = self.data.reset_index() 
+        self.data = self.preprocess(self.data)
         self.labels = self.data['Label'] # Pandas Series
         self.data = self.data.drop(columns=['Label']) # Pandas DataFrame
 
