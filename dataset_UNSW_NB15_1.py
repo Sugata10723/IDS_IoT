@@ -99,7 +99,12 @@ class Dataset_UNSW_NB15_1:
         data = data[is_int]
 
         # dstip, srcipをbitwiseに変換
-        data = self.bitwise(data)
+        data = self.bitwise(data) # デバッグのためにコメントアウト
+
+        #srcipを出現率が高い順から20個ずつ取得する
+        #srcip = data['srcip'].value_counts().index[:20]
+        #srcipを含む行のみを抽出
+        #data = data[data['srcip'].isin(srcip)]
 
         data = data.reset_index() 
 
@@ -124,7 +129,7 @@ class Dataset_UNSW_NB15_1:
         self.data.columns = features
         self.data = self.cut_data(self.data)
 
-        self.data = self.preprocess(self.data)
+        self.data = self.preprocess(self.data) 
         self.labels = self.data['Label'] # Pandas Series
         self.data = self.data.drop(columns=['Label']) # Pandas DataFrame
 

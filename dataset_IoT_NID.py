@@ -14,12 +14,12 @@ from sklearn.impute import SimpleImputer
 # infがある行があるので削除する
 #################################################################################
 
-class Dataset_IoT_Network_Intrusion_Dataset:
+class Dataset_IoT_NID:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
     def __init__(self, nrows):
         self.nrows = nrows
-        self.CONFIG_FILE_PATH = os.path.join(self.BASE_DIR, 'config', 'config_IoT_Network_Intrusion_Dataset.json')
+        self.CONFIG_FILE_PATH = os.path.join(self.BASE_DIR, 'config', 'config_IoT_NID.json')
         self.config = self.load_config()
         self.DATA_CSV_FILE_PATH = f"{self.BASE_DIR}/data/IoT_Network_Intrusion_Dataset/IoT_Network_Intrusion_Dataset.csv"
         self.data = None

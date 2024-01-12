@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from model import AnomalyDetector
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
+from sklearn.model_selection import GridSearchCV
 
 class Experiment:
     def __init__(self, X_train, X_test, y_train, y_test, config):
@@ -57,14 +58,14 @@ class Experiment:
 
     def grid_run(self, k, dif):
         # max_featureを取得
-        self.model = AnomalyDetector(k=k, n_fi=1, n_pca=1, categorical_columns=self.config['categorical_columns'])
+        self.model = AnomalyDetector(k=1, n_fi=1, n_pca=1, categorical_columns=self.config['categorical_columns'])
         self.model.fit(self.X_train, self.y_train)
         max_feature = self.model.max_feature
         print(f'max_feature: {max_feature}')
-
         n_fis = list(range(1, max_feature + 1, dif))
         n_pcas = list(range(1, max_feature + 1, dif))
         param_grid = [{'n_fi': n_fi, 'n_pca': n_pca} for n_fi in n_fis for n_pca in n_pcas if n_fi + n_pca <= max_feature]
+
         f1_scores = np.zeros((max_feature, max_feature))
         accuracy_scores = np.zeros((max_feature, max_feature))
 
@@ -97,8 +98,6 @@ class Experiment:
         plt.legend()
 
         plt.show()
-
-
 
 
 
