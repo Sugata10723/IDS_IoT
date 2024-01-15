@@ -80,6 +80,11 @@ class Dataset_UNSW_NB15_1:
         # バイナリ文字列の特徴量はもう不要なので削除
         data.drop(columns=['dstip_bin', 'srcip_bin', 'dstip', 'srcip'], inplace=True)
 
+        # カテゴリ変数にdstipを追加
+        for i in range(32):
+            self.config['categorical_columns'].append(f'dstip_bit_{i}')
+            self.config['categorical_columns'].append(f'srcip_bit_{i}')
+
         return data
 
     def preprocess(self, data):
@@ -99,12 +104,12 @@ class Dataset_UNSW_NB15_1:
         data = data[is_int]
 
         # dstip, srcipをbitwiseに変換
-        data = self.bitwise(data) # デバッグのためにコメントアウト
+        #data = self.bitwise(data) # デバッグのためにコメントアウト
 
         #srcipを出現率が高い順から20個ずつ取得する
-        #srcip = data['srcip'].value_counts().index[:20]
+        srcip = data['srcip'].value_counts().index[:20]
         #srcipを含む行のみを抽出
-        #data = data[data['srcip'].isin(srcip)]
+        data = data[data['srcip'].isin(srcip)]
 
         data = data.reset_index() 
 

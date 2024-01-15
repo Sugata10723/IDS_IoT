@@ -32,15 +32,12 @@ class AnomalyDetector:
         self.categorical_columns = categorical_columns
         self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
         self.mm = preprocessing.MinMaxScaler()
-        self.important_features_attack = None
-        self.important_features_normal = None
-        self.pca_attack = None
-        self.pca_normal = None
+        self.important_features = None
+        self.pca = None
         self.sampled_attack = None
         self.sampled_normal = None
         self.iforest_attack = None
         self.iforest_normal = None
-        self.max_feature = None
         # プロットのため
         self.attack_data = None
         self.normal_data = None
@@ -50,20 +47,20 @@ class AnomalyDetector:
         normal_indices = np.where(y == 0)[0]
         return X[attack_indices], X[normal_indices]
 
-    def feature_selection(self, data):
-        # 特徴量の分散を計算
-        variances = np.var(data, axis=0)
-        # 分散の分布を表示
-        plt.hist(variances, bins='auto')
-        plt.title('Distribution of Feature Variances')
-        plt.xlabel('Variance')
-        plt.ylabel('Frequency')
-        plt.show()
-        # 分散が0.05を超える特徴量はカットする
-        important_features = np.where(variances < 0.1)[0]
-        data_fi = data[:, important_features]
+    def feature_selection(self, categorical_data, numerical_data, y):
+        # カテゴリ変数に対してFIを用いて特徴量選択
+        xgb_model = xgb.XGBClassifier() # 使用するモデルは要検討
+        xgb_model.fit(categorical_data, y)
+        feature_importances = xgb_model.feature_importances_
+        important_features = np.argsort(feature_importances)[::-1][:self.n_fi]
+        data_fi = categorical_data[:, important_features]
+        # 数値変数に対してPCAを用いて特徴量選択
+        pca = PCA(n_components=self.n_pca)
+        data_pca = pca.fit_transform(numerical_data)
+        # 特徴量選択後のデータを結合 出力：DataFrame
+        data_fs = np.concatenate([data_fi, data_pca], axis=1)
 
-        return data_fi, important_features
+        return data_fs, pca, important_features 
 
     def get_nearest_points(self, data, kmeans):
         nearest_points = []
@@ -91,15 +88,15 @@ class AnomalyDetector:
         ## Preprocessing X: Pandas DataFrame, y: NumPy Array
         # one-hotエンコード 入力：DataFrame　出力：ndarray
         X_ohe = self.ohe.fit_transform(X[self.categorical_columns])
-        X = np.concatenate([X.drop(columns=self.categorical_columns).values, X_ohe], axis=1)
-        self.max_feature = X.shape[1] # プロットのために記録
+        X_num = X.drop(columns=self.categorical_columns).values
+        print(f"X_num shape is: {X_num.shape}")
+        print(f"X_ohe shape is: {X_ohe.shape}")
         # 正規化 入力：ndarray　出力：ndarray
-        X = self.mm.fit_transform(X)
+        X_num = self.mm.fit_transform(X_num)
+        # 特徴量選択 入力：ndarray 出力: ndarray
+        X_fs, self.pca, self.important_features = self.feature_selection(X_ohe, X_num, y)
         # サブシステムに分割 入力：ndarray　出力：ndarray
-        raw_attack_data, raw_normal_data = self.splitsubsystem(X, y)
-        # 特徴量選択 入力：ndarray 出力：ndarray
-        self.attack_data, self.important_features_attack = self.feature_selection(raw_attack_data)
-        self.normal_data, self.important_features_normal = self.feature_selection(raw_normal_data)
+        self.attack_data, self.normal_data = self.splitsubsystem(X_fs, y)
         # サンプリング 入力：ndarray　出力：ndarray
         self.sampled_attack = self.make_cluster(self.attack_data)
         self.sampled_normal = self.make_cluster(self.normal_data)
@@ -118,18 +115,19 @@ class AnomalyDetector:
         ## preprocessing
         # one-hotエンコード　入力：DataFrame　出力：ndarray
         X_ohe = self.ohe.transform(X[self.categorical_columns])
-        X = np.concatenate([X.drop(columns=self.categorical_columns).values, X_ohe], axis=1)
-        # 正規化　入力：ndarray　出力：ndarray
-        X = self.mm.transform(X)
-        # 特徴量選択 入力：ndarray 出力：ndarray
-        X_attack = X[:, self.important_features_attack]
-        X_normal = X[:, self.important_features_normal]     
-
+        X_num = X.drop(columns=self.categorical_columns).values
+        # 正規化　入力：ndarray 出力：ndarray
+        X_num = self.mm.transform(X_num) # numeicalデータにだけでよい
+        # 特徴量選択 入力：ndarray 出力：ndarray    
+        X_ohe = X_ohe[:, self.important_features]
+        X_num = self.pca.transform(X_num)
+        X = np.concatenate([X_ohe, X_num], axis=1)
+    
         ## predict
-        attack_results = self.iforest_attack.predict(X_attack)
+        attack_results = self.iforest_attack.predict(X)
         attack_results = [1 if result == 1 else 0 for result in attack_results]   
         
-        normal_results = self.iforest_normal.predict(X_normal)
+        normal_results = self.iforest_normal.predict(X)
         normal_results = [1 if result == 1 else 0 for result in normal_results]
         
         for i in range(total_points):

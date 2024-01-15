@@ -7,6 +7,6 @@
         "Flow_ID"
     ],
     "categorical_columns": [
-        
+        "Protocol"
     ]
 }

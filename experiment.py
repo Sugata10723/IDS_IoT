@@ -51,9 +51,9 @@ class Experiment:
         self.fit()
         self.evaluate()
         self.print_results()
-        #plotter.plot_cluster(self.model.attack_data, self.model.sampled_attack, self.model.normal_data, self.model.sampled_normal)
-        #plotter.plot_results(self.X_test, self.y_test, self.prediction, self.config)
-        #plotter.plot_confusion_matrix(self.y_test, self.prediction)
+        plotter.plot_cluster(self.model.attack_data, self.model.sampled_attack, self.model.normal_data, self.model.sampled_normal)
+        plotter.plot_results(self.X_test, self.y_test, self.prediction, self.config)
+        plotter.plot_confusion_matrix(self.y_test, self.prediction)
         #plotter.plot_feature_importances(self.X_train, self.y_train, self.config['categorical_columns'])
 
     def grid_run(self, k, dif):
