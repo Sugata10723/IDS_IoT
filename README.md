@@ -2,6 +2,7 @@
 - 2023/11/17: READMEの概要を作成
 - 2023/11/23: 補足を追加
 - 2023/12/18: データセットを追記
+- 2024/01/15: コードレビューのため情報を追加
 
 # 概要
 - 研究の目的:IoTデバイスの通信ログを入力に侵入の検知を行うアルゴリズムを提案した[Fusion-based anomaly detection system using modified isolation forest for internet of things](https://link.springer.com/article/10.1007/s12652-022-04393-9)の追試を行うためのコード
@@ -25,20 +26,12 @@
     - num_rows:読み込むデータセットの数
     - unwanted_columns:トレーニングに必要ないカラムを設定
     - categorical_columns:カテゴリカルカラムを設定
-- 実行手順: 
-    1. main.pyを実行する
-    2. ターミナルで
-    '''mlflow ui --backend-store-uri file:///tmp/mlruns'''
-    と入力してmlflow用のサーバーを立ち上げる
-    3. localohost:5000(デフォルト)にアクセスして実験記録を確認できる 
 
 # データ
 - 使用データ:
-    - testdataset: ランダムに生成した実験用のテストデータ。
-    - Network_intrusion_dataset:
+    - IoTNetworkIntrusionDataset: 原論文中には存在しないデータセット
     - UNSW_NB15: 論文中でも使用されたデータセット 
-    - KDDCUP99: 論文中でも使用されたデータセット(現在は使用不可)
-    - NSL_KDD: 
+    - NSL_KDD: 原論文中で使用されたデータセット
 - データの準備: 
     - 以下の参考文献のリンクから取得してください
 

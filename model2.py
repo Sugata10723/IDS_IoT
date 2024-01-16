@@ -89,8 +89,10 @@ class AnomalyDetector:
         # one-hotエンコード 入力：DataFrame　出力：ndarray
         X_ohe = self.ohe.fit_transform(X[self.categorical_columns])
         X_num = X.drop(columns=self.categorical_columns).values
-        print(f"X_num shape is: {X_num.shape}")
-        print(f"X_ohe shape is: {X_ohe.shape}")
+        self.ohe_shape = X_ohe.shape[1] # gridsearchで使用
+        self.num_shape = X_num.shape[1] # gridsearchで使用
+        print(f"X_num shape is: {self.num_shape}")
+        print(f"X_ohe shape is: {self.ohe_shape}")
         # 正規化 入力：ndarray　出力：ndarray
         X_num = self.mm.fit_transform(X_num)
         # 特徴量選択 入力：ndarray 出力: ndarray

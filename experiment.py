@@ -2,7 +2,7 @@ import time
 import plotter
 import numpy as np
 import matplotlib.pyplot as plt
-from model import AnomalyDetector
+from model2 import AnomalyDetector
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 from sklearn.model_selection import GridSearchCV
 
@@ -51,23 +51,21 @@ class Experiment:
         self.fit()
         self.evaluate()
         self.print_results()
-        plotter.plot_cluster(self.model.attack_data, self.model.sampled_attack, self.model.normal_data, self.model.sampled_normal)
-        plotter.plot_results(self.X_test, self.y_test, self.prediction, self.config)
-        plotter.plot_confusion_matrix(self.y_test, self.prediction)
+        #plotter.plot_cluster(self.model.attack_data, self.model.sampled_attack, self.model.normal_data, self.model.sampled_normal)
+        #plotter.plot_results(self.X_test, self.y_test, self.prediction, self.config)
+        #plotter.plot_confusion_matrix(self.y_test, self.prediction)
         #plotter.plot_feature_importances(self.X_train, self.y_train, self.config['categorical_columns'])
 
     def grid_run(self, k, dif):
         # max_featureを取得
         self.model = AnomalyDetector(k=1, n_fi=1, n_pca=1, categorical_columns=self.config['categorical_columns'])
         self.model.fit(self.X_train, self.y_train)
-        max_feature = self.model.max_feature
-        print(f'max_feature: {max_feature}')
-        n_fis = list(range(1, max_feature + 1, dif))
-        n_pcas = list(range(1, max_feature + 1, dif))
-        param_grid = [{'n_fi': n_fi, 'n_pca': n_pca} for n_fi in n_fis for n_pca in n_pcas if n_fi + n_pca <= max_feature]
+        n_fis = list(range(1, self.model.ohe_shape+1, dif))
+        n_pcas = list(range(1, self.model.num_shape+1, dif))
+        param_grid = [{'n_fi': n_fi, 'n_pca': n_pca} for n_fi in n_fis for n_pca in n_pcas]
 
-        f1_scores = np.zeros((max_feature, max_feature))
-        accuracy_scores = np.zeros((max_feature, max_feature))
+        f1_scores = np.zeros((self.model.ohe_shape, self.model.num_shape))
+        accuracy_scores = np.zeros((self.model.ohe_shape, self.model.num_shape))
 
         for params in param_grid:
             print(params)
