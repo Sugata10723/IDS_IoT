@@ -48,14 +48,14 @@ class Dataset_NSL_KDD:
         # 指定した行数だけ読み込む
         if self.nrows > self.X_train.shape[0]:
             self.nrows = self.X_train.shape[0]
-        self.X_train = self.X_train.iloc[:self.nrows]
-        if int(self.nrows * 0.3) > self.X_test.shape[0]:
-            self.nrows = self.X_test.shape[0]
-        self.X_test = self.X_test.iloc[:int(self.nrows * 0.3)]
+        self.X_train = self.X_train.sample(n=self.nrows)
+        self.X_test = self.X_test.sample(n=self.nrows)
 
+        # labelを正常:0, 攻撃:1に変換
         self.X_train['label'] = self.X_train['label'].apply(lambda x: 0 if x == 'normal' else 1)
         self.X_test['label'] = self.X_test['label'].apply(lambda x: 0 if x == 'normal' else 1)
-        
+
+        # ラベルを分割
         self.y_train = self.X_train['label'] # Pandas Series 
         self.X_train = self.X_train.drop('label', axis=1) # Pandas DataFrame
         self.y_test = self.X_test['label'] # Pandas Series
