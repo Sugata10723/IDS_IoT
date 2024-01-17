@@ -5,7 +5,9 @@
     "categorical_columns": [
       "proto",
       "service",
-      "state"
+      "state",
+      "is_sm_ips_ports",
+      "is_ftp_login"
     ]
 }
       

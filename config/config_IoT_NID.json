@@ -4,7 +4,9 @@
         "Cat",
         "Sub_Cat",
         "Timestamp",
-        "Flow_ID"
+        "Flow_ID",
+        "Src_IP",
+        "Dst_IP"
     ],
     "categorical_columns": [
         "Protocol"
