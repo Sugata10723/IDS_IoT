@@ -6,9 +6,23 @@
         "Timestamp",
         "Flow_ID",
         "Src_IP",
-        "Dst_IP"
+        "Dst_IP",
+        "Src_Port",
+        "Dst_Port"
     ],
     "categorical_columns": [
-        "Protocol"
+        "Protocol",
+        "Fwd_PSH_Flags",
+        "Bwd_PSH_Flags",
+        "Fwd_URG_Flags",
+        "Bwd_URG_Flags",
+        "FIN_Flag_Cnt",
+        "SYN_Flag_Cnt",
+        "RST_Flag_Cnt",
+        "PSH_Flag_Cnt",
+        "ACK_Flag_Cnt",
+        "URG_Flag_Cnt",
+        "CWE_Flag_Count",
+        "ECE_Flag_Cnt"
     ]
 }
