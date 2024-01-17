@@ -14,33 +14,26 @@ from sklearn.linear_model import Lasso
 #################################################################################   
 # パラメータ
 # k: クラスタ数
-# n_fi: 特徴量選択における重要な特徴量の数
-# n_pca: 特徴量選択におけるPCAによる特徴抽出の次元数
 # n_estimators: Isolation Forestの決定木の数
 # max_samples: Isolation Forestのサンプル数
 # contamination: Isolation Forestの外れ値の割合
 #################################################################################
 
 
-class AnomalyDetector:
-    def __init__(self, k=1, n_fi=1, n_pca=1, categorical_columns=None):
+class AnomalyDetector_var:
+    def __init__(self, k=1, categorical_columns=None):
         self.k = k
         self.n_estimators = 50
         self.max_samples = 100
-        self.n_fi = n_fi
-        self.n_pca = n_pca
         self.categorical_columns = categorical_columns
         self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
         self.mm = preprocessing.MinMaxScaler()
         self.important_features_attack = None
         self.important_features_normal = None
-        self.pca_attack = None
-        self.pca_normal = None
         self.sampled_attack = None
         self.sampled_normal = None
         self.iforest_attack = None
         self.iforest_normal = None
-        self.max_feature = None
         # プロットのため
         self.attack_data = None
         self.normal_data = None
@@ -59,8 +52,8 @@ class AnomalyDetector:
         plt.xlabel('Variance')
         plt.ylabel('Frequency')
         plt.show()
-        # 分散が0.05を超える特徴量はカットする
-        important_features = np.where(variances < 0.1)[0]
+        # 分散が0.01を超える特徴量はカットする
+        important_features = np.where(variances > 0.01)[0]
         data_fi = data[:, important_features]
 
         return data_fi, important_features
@@ -91,12 +84,14 @@ class AnomalyDetector:
         ## Preprocessing X: Pandas DataFrame, y: NumPy Array
         # one-hotエンコード 入力：DataFrame　出力：ndarray
         X_ohe = self.ohe.fit_transform(X[self.categorical_columns])
-        X = np.concatenate([X.drop(columns=self.categorical_columns).values, X_ohe], axis=1)
-        self.max_feature = X.shape[1] # プロットのために記録
+        X_num = X.drop(columns=self.categorical_columns, inplace=False).values
+        print(f"X_ohe shape is: {X_ohe.shape[1]}")
+        print(f"X_num shape is: {X_num.shape[1]}")
         # 正規化 入力：ndarray　出力：ndarray
-        X = self.mm.fit_transform(X)
+        X_num = self.mm.fit_transform(X_num)
+        X_processed = np.concatenate([X_num, X_ohe], axis=1)
         # サブシステムに分割 入力：ndarray　出力：ndarray
-        raw_attack_data, raw_normal_data = self.splitsubsystem(X, y)
+        raw_attack_data, raw_normal_data = self.splitsubsystem(X_processed, y)
         # 特徴量選択 入力：ndarray 出力：ndarray
         self.attack_data, self.important_features_attack = self.feature_selection(raw_attack_data)
         self.normal_data, self.important_features_normal = self.feature_selection(raw_normal_data)
@@ -118,12 +113,13 @@ class AnomalyDetector:
         ## preprocessing
         # one-hotエンコード　入力：DataFrame　出力：ndarray
         X_ohe = self.ohe.transform(X[self.categorical_columns])
-        X = np.concatenate([X.drop(columns=self.categorical_columns).values, X_ohe], axis=1)
+        X_num = X.drop(columns=self.categorical_columns, inplace=False).values
         # 正規化　入力：ndarray　出力：ndarray
-        X = self.mm.transform(X)
+        X_num = self.mm.transform(X_num)
+        X_processed = np.concatenate([X_num, X_ohe], axis=1)
         # 特徴量選択 入力：ndarray 出力：ndarray
-        X_attack = X[:, self.important_features_attack]
-        X_normal = X[:, self.important_features_normal]     
+        X_attack = X_processed[:, self.important_features_attack]
+        X_normal = X_processed[:, self.important_features_normal]     
 
         ## predict
         attack_results = self.iforest_attack.predict(X_attack)

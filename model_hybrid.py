@@ -9,7 +9,6 @@ from scipy.spatial import distance
 import sklearn.preprocessing as preprocessing
 import plotter 
 import matplotlib.pyplot as plt
-from sklearn.linear_model import Lasso
 
 #################################################################################   
 # パラメータ
@@ -22,7 +21,7 @@ from sklearn.linear_model import Lasso
 #################################################################################
 
 
-class AnomalyDetector:
+class AnomalyDetector_hybrid:
     def __init__(self, k=1, n_fi=1, n_pca=1, categorical_columns=None):
         self.k = k
         self.n_estimators = 50
@@ -88,11 +87,7 @@ class AnomalyDetector:
         ## Preprocessing X: Pandas DataFrame, y: NumPy Array
         # one-hotエンコード 入力：DataFrame　出力：ndarray
         X_ohe = self.ohe.fit_transform(X[self.categorical_columns])
-        X_num = X.drop(columns=self.categorical_columns).values
-        self.ohe_shape = X_ohe.shape[1] # gridsearchで使用
-        self.num_shape = X_num.shape[1] # gridsearchで使用
-        print(f"X_num shape is: {self.num_shape}")
-        print(f"X_ohe shape is: {self.ohe_shape}")
+        X_num = X.drop(columns=self.categorical_columns, inplace=False).values
         # 正規化 入力：ndarray　出力：ndarray
         X_num = self.mm.fit_transform(X_num)
         # 特徴量選択 入力：ndarray 出力: ndarray
@@ -117,19 +112,19 @@ class AnomalyDetector:
         ## preprocessing
         # one-hotエンコード　入力：DataFrame　出力：ndarray
         X_ohe = self.ohe.transform(X[self.categorical_columns])
-        X_num = X.drop(columns=self.categorical_columns).values
+        X_num = X.drop(columns=self.categorical_columns, inplace=False).values
         # 正規化　入力：ndarray 出力：ndarray
         X_num = self.mm.transform(X_num) # numeicalデータにだけでよい
         # 特徴量選択 入力：ndarray 出力：ndarray    
         X_ohe = X_ohe[:, self.important_features]
         X_num = self.pca.transform(X_num)
-        X = np.concatenate([X_ohe, X_num], axis=1)
+        X_processed = np.concatenate([X_ohe, X_num], axis=1)
     
         ## predict
-        attack_results = self.iforest_attack.predict(X)
+        attack_results = self.iforest_attack.predict(X_processed)
         attack_results = [1 if result == 1 else 0 for result in attack_results]   
         
-        normal_results = self.iforest_normal.predict(X)
+        normal_results = self.iforest_normal.predict(X_processed)
         normal_results = [1 if result == 1 else 0 for result in normal_results]
         
         for i in range(total_points):
