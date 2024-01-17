@@ -60,24 +60,32 @@ def plot_results(X, y, predictions, config):
     plt.tight_layout()
     plt.show()
 
-def plot_confusion_matrix(y_test, y_pred):
+def plot_confusion_matrix(y_test, y_pred, attack_prd, normal_prd):
     cm = confusion_matrix(y_test, y_pred)
+    cm_attack = confusion_matrix(y_test, attack_prd) 
+    cm_normal = confusion_matrix(y_test, normal_prd)
     unique_labels = np.unique(np.concatenate([y_test, y_pred]))
-    
-    plt.figure(figsize=(10, 7))
+
+    plt.figure(figsize=(36, 10))
+
+    plt.subplot(1, 3, 1)
     sns.heatmap(cm, annot=True, fmt='g', xticklabels=unique_labels, yticklabels=unique_labels)
     plt.xlabel('Predicted Label')
     plt.ylabel('True Label')
     plt.title('Confusion Matrix')
-    plt.show()
 
-def plot_heatmap(scores, title):
-    # F1スコアのヒートマップをプロット
-    plt.figure(figsize=(10, 10))
-    plt.imshow(scores, cmap='hot', interpolation='nearest', origin='lower', vmax=1)
-    plt.colorbar(label=title)
-    plt.xlabel('n_pcas')
-    plt.ylabel('n_fis')
-    plt.title(f'{title} Heatmap')
+    plt.subplot(1, 3, 2)
+    sns.heatmap(cm_attack, annot=True, fmt='g')
+    plt.xlabel('Predicted Label')
+    plt.ylabel('True Label')
+    plt.title('Confusion Matrix Attack')
+
+    plt.subplot(1, 3, 3)
+    sns.heatmap(cm_normal, annot=True, fmt='g')
+    plt.xlabel('Predicted Label')
+    plt.ylabel('True Label')
+    plt.title('Confusion Matrix Normal')
+
+    plt.tight_layout()
     plt.show()
 

@@ -36,6 +36,8 @@ class AnomalyDetector_noFS:
         # プロットのため
         self.attack_data = None
         self.normal_data = None
+        self.attack_prd = None
+        self.normal_prd = None
 
     def splitsubsystem(self, X, y):
         attack_indices = np.where(y == 1)[0]
@@ -100,16 +102,18 @@ class AnomalyDetector_noFS:
         X_processed = np.concatenate([X_num, X_ohe], axis=1)
     
         ## predict
-        attack_results = self.iforest_attack.predict(X_processed)
-        attack_results = [1 if result == 1 else 0 for result in attack_results]   
+        attack_prd = self.iforest_attack.predict(X_processed)
+        attack_prd = [1 if result == 1 else 0 for result in attack_prd]   
+        self.attack_prd = attack_prd
         
-        normal_results = self.iforest_normal.predict(X_processed)
-        normal_results = [1 if result == 1 else 0 for result in normal_results]
+        normal_prd = self.iforest_normal.predict(X_processed)
+        normal_prd = [1 if result == 1 else 0 for result in normal_prd]
+        self.normal_prd = [0 if x == 1 else 1 for x in normal_prd] # normalの判定は逆になる
         
         for i in range(total_points):
-            if attack_results[i] == 0 and normal_results[i] == 1: # normal
+            if attack_prd[i] == 0 and normal_prd[i] == 1: # normal
                 predictions.append(0)  
-            elif attack_results[i] == 0 and normal_results[i] == 0: # unknown
+            elif attack_prd[i] == 0 and normal_prd[i] == 0: # unknown
                 predictions.append(-1)  
             else: # attack
                 predictions.append(1)

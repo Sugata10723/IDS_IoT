@@ -37,6 +37,8 @@ class AnomalyDetector_var:
         # プロットのため
         self.attack_data = None
         self.normal_data = None
+        self.attack_prd = None
+        self.normal_prd = None
 
     def splitsubsystem(self, X, y):
         attack_indices = np.where(y == 1)[0]
@@ -46,14 +48,15 @@ class AnomalyDetector_var:
     def feature_selection(self, data):
         # 特徴量の分散を計算
         variances = np.var(data, axis=0)
+        threshold = np.median(variances)
         # 分散の分布を表示
-        plt.hist(variances, bins='auto')
-        plt.title('Distribution of Feature Variances')
+        plt.hist(variances, bins=50)
+        plt.title(f'Distribution of Feature Variances: median={round(threshold, 3)}')
         plt.xlabel('Variance')
         plt.ylabel('Frequency')
         plt.show()
-        # 分散が0.01を超える特徴量はカットする
-        important_features = np.where(variances > 0.01)[0]
+        # 分散の中央値以上の分散を持つ特徴量を削除
+        important_features = np.where(variances >= threshold)[0]
         data_fi = data[:, important_features]
 
         return data_fi, important_features
@@ -122,16 +125,18 @@ class AnomalyDetector_var:
         X_normal = X_processed[:, self.important_features_normal]     
 
         ## predict
-        attack_results = self.iforest_attack.predict(X_attack)
-        attack_results = [1 if result == 1 else 0 for result in attack_results]   
+        attack_prd = self.iforest_attack.predict(X_attack)
+        attack_prd = [1 if result == 1 else 0 for result in attack_prd]   
+        self.attack_prd = attack_prd
         
-        normal_results = self.iforest_normal.predict(X_normal)
-        normal_results = [1 if result == 1 else 0 for result in normal_results]
+        normal_prd = self.iforest_normal.predict(X_normal)
+        normal_prd = [1 if result == 1 else 0 for result in normal_prd]
+        self.normal_prd = [0 if x == 1 else 1 for x in normal_prd] # normalの判定は逆になる
         
         for i in range(total_points):
-            if attack_results[i] == 0 and normal_results[i] == 1: # normal
+            if attack_prd[i] == 0 and normal_prd[i] == 1: # normal
                 predictions.append(0)  
-            elif attack_results[i] == 0 and normal_results[i] == 0: # unknown
+            elif attack_prd[i] == 0 and normal_prd[i] == 0: # unknown
                 predictions.append(-1)  
             else: # attack
                 predictions.append(1)
