@@ -36,11 +36,13 @@ class Dataset_UNSW_NB15:
             return json.load(f)
 
     def preprocess(self, data):
+        # グローバル変数を変更しないようにコピー
         data = data.copy()
+        nrows = self.nrows
         # データをサンプリング
-        if self.nrows > data.shape[0]:
-            self.nrows = data.shape[0]
-        data = data.sample(n=self.nrows)
+        if nrows > data.shape[0]:
+            nrows = data.shape[0]
+        data = data.sample(n=nrows)
         # 必要ない列を削除
         data = data.drop(columns=self.config['unwanted_columns'])
         # インデックスをリセット

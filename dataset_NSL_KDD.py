@@ -33,6 +33,24 @@ class Dataset_NSL_KDD:
         with open(self.CONFIG_FILE_PATH, 'r') as f:
             return json.load(f)
 
+    def preprocess(self, data):
+        # グローバル変数を変更しないようにコピー
+        data = data.copy()
+        nrows = self.nrows
+        # 指定した行数だけ読み込む
+        if nrows > data.shape[0]:
+            nrows = data.shape[0]
+        data = data.sample(n=nrows)
+        # labelを正常:0, 攻撃:1に変換
+        data['label'] = data['label'].apply(lambda x: 0 if x == 'normal' else 1)
+        # 必要ない列を削除
+        data = data.drop(columns=self.config['unwanted_columns'])
+        # ラベルを分割
+        labels = data['label'] # Pandas Series 
+        data = data.drop('label', axis=1) # Pandas DataFrame
+
+        return data, labels
+
     def load_data(self):
         features=["duration","protocol_type","service","flag","src_bytes","dst_bytes","land","wrong_fragment","urgent","hot",
           "num_failed_logins","logged_in","num_compromised","root_shell","su_attempted","num_root","num_file_creations","num_shells",
@@ -45,21 +63,9 @@ class Dataset_NSL_KDD:
         self.X_train = pd.read_csv(self.DATA_TRAIN_FILE_PATH, sep=",", header=None, names=features)
         self.X_test = pd.read_csv(self.DATA_TEST_FILE_PATH, sep=",", header=None, names=features)
 
-        # 指定した行数だけ読み込む
-        if self.nrows > self.X_train.shape[0]:
-            self.nrows = self.X_train.shape[0]
-        self.X_train = self.X_train.sample(n=self.nrows)
-        self.X_test = self.X_test.sample(n=self.nrows)
-
-        # labelを正常:0, 攻撃:1に変換
-        self.X_train['label'] = self.X_train['label'].apply(lambda x: 0 if x == 'normal' else 1)
-        self.X_test['label'] = self.X_test['label'].apply(lambda x: 0 if x == 'normal' else 1)
-
-        # ラベルを分割
-        self.y_train = self.X_train['label'] # Pandas Series 
-        self.X_train = self.X_train.drop('label', axis=1) # Pandas DataFrame
-        self.y_test = self.X_test['label'] # Pandas Series
-        self.X_test = self.X_test.drop('label', axis=1) # Pandas DataFrame
+        # Preprocess data
+        self.X_train, self.y_train = self.preprocess(self.X_train)
+        self.X_test, self.y_test = self.preprocess(self.X_test)
 
     def get_data(self):
         return self.X_train, self.X_test, self.y_train, self.y_test, self.config
