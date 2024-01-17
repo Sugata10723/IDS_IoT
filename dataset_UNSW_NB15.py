@@ -4,7 +4,10 @@ import json
 import numpy as np 
 ########################################
 # Dataset_UNSW_NB15
-# 本来であれば49個ある特徴量が44個しかない
+# 本来であれば49個ある特徴量が46個しかない(dstip, srcip, Stime, Ltimeがなく、rateが追加されている)
+# labelとattack_catを除くと44個の特徴量
+# カテゴリ変数は5個
+# 数値変数は39個
 # training-setとtesting-setに分かれているが、これは逆である
 # training-set: 175341行
 # testing-set: 82332行
@@ -32,33 +35,25 @@ class Dataset_UNSW_NB15:
         with open(self.CONFIG_FILE_PATH, 'r') as f:
             return json.load(f)
 
-    def split_ip(self, ip):
-        return list(map(int, ip.split('.')))
-
     def preprocess(self, data):
         data = data.copy()
-        # 指定した行数だけ読み込む
-        #data = data.iloc[:self.config['nrows']]
-
-        # 不要なカラムを削除
+        # データをサンプリング
+        if self.nrows > data.shape[0]:
+            self.nrows = data.shape[0]
+        data = data.sample(n=self.nrows)
+        # 必要ない列を削除
         data = data.drop(columns=self.config['unwanted_columns'])
-
-        data = data.reset_index() 
-        labels = data['label'] # Pandas Series
+        # インデックスをリセット
+        data = data.reset_index()
+        # labelとデータを分離 
+        labels = data['label'].values # Numpy Array
         data = data.drop(columns=['label']) # Pandas DataFrame
+        
         return data, labels
 
     def load_data(self):
         self.data_train = pd.read_csv(self.DATA_TRAINING_FILE_PATH)
         self.data_test = pd.read_csv(self.DATA_TEST_FILE_PATH)
-
-        # 指定した行数だけ読み込む
-        if self.nrows > self.data_train.shape[0]:
-            self.nrows = self.data_train.shape[0]
-        self.data_train = self.data_train.iloc[:self.nrows]
-        if int(self.nrows * 0.3) > self.data_test.shape[0]:
-            self.nrows = self.data_test.shape[0]
-        self.data_test = self.data_test.iloc[:int(self.nrows * 0.3)]
 
         self.X_train, self.y_train = self.preprocess(self.data_train)
         self.X_test, self.y_test = self.preprocess(self.data_test)
