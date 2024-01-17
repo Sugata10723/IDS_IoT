@@ -2,7 +2,9 @@ import time
 import plotter
 import numpy as np
 import matplotlib.pyplot as plt
-from model2 import AnomalyDetector
+from model_noFS import AnomalyDetector_noFS
+from model_hybrid import AnomalyDetector_hybrid
+from model_var import AnomalyDetector_var
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 from sklearn.model_selection import GridSearchCV
 
@@ -10,8 +12,8 @@ class Experiment:
     def __init__(self, X_train, X_test, y_train, y_test, config):
         self.X_train = X_train # Pandas DataFrame
         self.X_test = X_test # Pandas DataFrame
-        self.y_train = y_train # Pandas Series
-        self.y_test = y_test # Pandas Series
+        self.y_train = y_train # ndarray
+        self.y_test = y_test # ndarray
         self.config = config
         self.model = None
         self.accuracy = None
@@ -40,62 +42,50 @@ class Experiment:
         print('Accuracy: {:.4f}'.format(self.accuracy))
         print('F1: {:.4f}'.format(self.f1))
 
-    def run(self, k, n_fi, n_pca):
+    def run_noFS(self, k):
+        model_params = {
+            'k': k,
+            'categorical_columns': self.config['categorical_columns']
+        }
+        self.model = AnomalyDetector_noFS(**model_params)
+        self.fit()
+        self.evaluate()
+        self.print_results()
+        plotter.plot_cluster(self.model.attack_data, self.model.sampled_attack, self.model.normal_data, self.model.sampled_normal)
+        plotter.plot_results(self.X_test, self.y_test, self.prediction, self.config)
+        plotter.plot_confusion_matrix(self.y_test, self.prediction)
+
+    def run_hybrid(self, k, n_fi, n_pca):
         model_params = {
             'k': k,
             'n_fi': n_fi,
             'n_pca': n_pca,
             'categorical_columns': self.config['categorical_columns']
         }
-        self.model = AnomalyDetector(**model_params)
+        self.model = AnomalyDetector_hybrid(**model_params)
         self.fit()
         self.evaluate()
         self.print_results()
-        #plotter.plot_cluster(self.model.attack_data, self.model.sampled_attack, self.model.normal_data, self.model.sampled_normal)
-        #plotter.plot_results(self.X_test, self.y_test, self.prediction, self.config)
-        #plotter.plot_confusion_matrix(self.y_test, self.prediction)
-        #plotter.plot_feature_importances(self.X_train, self.y_train, self.config['categorical_columns'])
+        plotter.plot_cluster(self.model.attack_data, self.model.sampled_attack, self.model.normal_data, self.model.sampled_normal)
+        plotter.plot_results(self.X_test, self.y_test, self.prediction, self.config)
+        plotter.plot_confusion_matrix(self.y_test, self.prediction)
 
-    def grid_run(self, k, dif):
-        # max_featureを取得
-        self.model = AnomalyDetector(k=1, n_fi=1, n_pca=1, categorical_columns=self.config['categorical_columns'])
-        self.model.fit(self.X_train, self.y_train)
-        n_fis = list(range(1, self.model.ohe_shape+1, dif))
-        n_pcas = list(range(1, self.model.num_shape+1, dif))
-        param_grid = [{'n_fi': n_fi, 'n_pca': n_pca} for n_fi in n_fis for n_pca in n_pcas]
+    
+    def run_var(self, k):
+        model_params = {
+            'k': k,
+            'categorical_columns': self.config['categorical_columns']
+        }
+        self.model = AnomalyDetector_var(**model_params)
+        self.fit()
+        self.evaluate()
+        self.print_results()
+        #plotter.plot_cluster(self.model.attack_data, self.model.sampled_attack, self.model.normal_data, self.model.sampled_normal) # 動かない
+        plotter.plot_results(self.X_test, self.y_test, self.prediction, self.config)
+        plotter.plot_confusion_matrix(self.y_test, self.prediction)
 
-        f1_scores = np.zeros((self.model.ohe_shape, self.model.num_shape))
-        accuracy_scores = np.zeros((self.model.ohe_shape, self.model.num_shape))
 
-        for params in param_grid:
-            print(params)
-            self.run(k, n_fi=params['n_fi'], n_pca=params['n_pca'])
-            print("-----------------------------------------------------")
-            f1_scores[params['n_fi'] - 1, params['n_pca'] - 1] = self.f1
-            accuracy_scores[params['n_fi'] - 1, params['n_pca'] - 1] = self.accuracy
-        
-        plotter.plot_heatmap(f1_scores, 'f1 score')
-        plotter.plot_heatmap(accuracy_scores, 'accuracy')
 
-    def k_run(self, min_k, max_k, dif, n_fi, n_pca):
-        aucs = []
-        f1s = []
-        for i in range(min_k, max_k + dif, dif):
-            print(f'k={i}')
-            self.run(i, n_fi=n_fi, n_pca=n_pca)
-            aucs.append(self.accuracy)
-            f1s.append(self.f1)
-
-        plt.figure(figsize=(10, 7))
-        plt.plot(range(min_k, max_k + dif, dif), aucs, label='AUC') 
-        plt.plot(range(min_k, max_k + dif, dif), f1s, label='F1 Score')
-
-        plt.title('AUC and F1 Score over iterations')
-        plt.xlabel('Iterations')
-        plt.ylabel('Score')
-        plt.legend()
-
-        plt.show()
 
 
 
