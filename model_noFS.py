@@ -49,7 +49,7 @@ class AnomalyDetector_noFS:
         for i, center in enumerate(kmeans.cluster_centers_):
             cluster_data = data[data[:, -1] == i]
             if len(cluster_data) > 0:  # k-meansの特性より、空のクラスタが存在する可能性がある
-                distances = np.apply_along_axis(lambda x: distance.euclidean(x[:-1], center), 1, cluster_data)
+                distances = np.linalg.norm(cluster_data[:, :-1] - center, axis=1)
                 nearest_point = np.argmin(distances)
                 nearest_points.append(cluster_data[nearest_point])
         nearest_points = np.array(nearest_points)
