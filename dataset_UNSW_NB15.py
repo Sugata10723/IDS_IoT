@@ -15,8 +15,7 @@ import numpy as np
 class Dataset_UNSW_NB15:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-    def __init__(self, nrows):
-        self.nrows = nrows
+    def __init__(self):
         self.CONFIG_FILE_PATH = os.path.join(self.BASE_DIR, 'config', 'config_UNSW_NB15.json')
         self.config = self.load_config()
         self.DATA_TRAINING_FILE_PATH = f"{self.BASE_DIR}/data/UNSW_NB15/UNSW_NB15_testing-set.csv" # 元データが逆
@@ -38,15 +37,8 @@ class Dataset_UNSW_NB15:
     def preprocess(self, data):
         # グローバル変数を変更しないようにコピー
         data = data.copy()
-        nrows = self.nrows
-        # データをサンプリング
-        if nrows > data.shape[0]:
-            nrows = data.shape[0]
-        data = data.sample(n=nrows)
         # 必要ない列を削除
         data = data.drop(columns=self.config['unwanted_columns'])
-        # インデックスをリセット
-        data = data.reset_index()
         # labelとデータを分離 
         labels = data['label'].values # Numpy Array
         data = data.drop(columns=['label']) # Pandas DataFrame

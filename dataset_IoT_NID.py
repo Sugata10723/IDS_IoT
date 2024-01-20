@@ -17,8 +17,7 @@ from sklearn.impute import SimpleImputer
 class Dataset_IoT_NID:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-    def __init__(self, nrows):
-        self.nrows = nrows
+    def __init__(self):
         self.CONFIG_FILE_PATH = os.path.join(self.BASE_DIR, 'config', 'config_IoT_NID.json')
         self.config = self.load_config()
         self.DATA_CSV_FILE_PATH = f"{self.BASE_DIR}/data/IoT_Network_Intrusion_Dataset/IoT_Network_Intrusion_Dataset.csv"
@@ -44,12 +43,6 @@ class Dataset_IoT_NID:
     def preprocess(self, data):
         # グローバル変数を変更しないようにコピー
         data = data.copy()
-        nrows = self.nrows
-        # 指定した行数だけ読み込む
-        if nrows > data.shape[0]:
-            nrows = data.shape[0]
-        data = data.sample(n=nrows)
-
         # labelを正常:0, 攻撃:1に変換
         data['Label'] = data['Label'].map({'Anomaly': 1, 'Normal': 0}) # Pandas Series
         #　不用なカラムを削除

@@ -16,8 +16,7 @@ from scipy.io import arff
 class Dataset_NSL_KDD:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-    def __init__(self, nrows):
-        self.nrows = nrows
+    def __init__(self):
         self.CONFIG_FILE_PATH = f"{self.BASE_DIR}/config/config_NSL_KDD.json"
         self.config = self.load_config()
         self.DATA_TRAIN_FILE_PATH = f"{self.BASE_DIR}/data/NSL-KDD/KDDTrain+.txt"
@@ -36,11 +35,6 @@ class Dataset_NSL_KDD:
     def preprocess(self, data):
         # グローバル変数を変更しないようにコピー
         data = data.copy()
-        nrows = self.nrows
-        # 指定した行数だけ読み込む
-        if nrows > data.shape[0]:
-            nrows = data.shape[0]
-        data = data.sample(n=nrows)
         # labelを正常:0, 攻撃:1に変換
         data['label'] = data['label'].apply(lambda x: 0 if x == 'normal' else 1)
         # 必要ない列を削除
