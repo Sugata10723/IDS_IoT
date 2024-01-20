@@ -9,7 +9,7 @@ from scipy.spatial import distance
 import sklearn.preprocessing as preprocessing
 import plotter 
 import matplotlib.pyplot as plt
-from sklearn.linear_model import Lasso
+from sklearn_extra.cluster import KMedoids
 
 #################################################################################   
 # AnomalyDetector_noFS
@@ -44,27 +44,13 @@ class AnomalyDetector_noFS:
         normal_indices = np.where(y == 0)[0]
         return X[attack_indices], X[normal_indices]
 
-    def get_nearest_points(self, data, kmeans):
-        nearest_points = []
-        for i, center in enumerate(kmeans.cluster_centers_):
-            cluster_data = data[data[:, -1] == i]
-            if len(cluster_data) > 0:  # k-meansの特性より、空のクラスタが存在する可能性がある
-                distances = np.linalg.norm(cluster_data[:, :-1] - center, axis=1)
-                nearest_point = np.argmin(distances)
-                nearest_points.append(cluster_data[nearest_point])
-        nearest_points = np.array(nearest_points)
-        nearest_points = nearest_points[:, :-1]  # 'cluster' columnを削除
-        return nearest_points
-
     def make_cluster(self, data):
         if len(data) < self.k: # サンプル数がkより小さい場合はそのまま返す
             return data
         else:
-            kmeans = KMeans(n_clusters=self.k, n_init=10)
-            clusters = kmeans.fit_predict(data)
-            data = np.column_stack((data, clusters))  # 'cluster' columnを追加
-            data_sampled = self.get_nearest_points(data, kmeans)
-            return data_sampled
+            kmedoids = KMedoids(n_clusters=self.k, init='k-medoids++', random_state=0)
+            kmedoids.fit(data)
+            return kmedoids.cluster_centers_
 
     def fit(self, X, y):
         ## Preprocessing X: Pandas DataFrame, y: NumPy Array
