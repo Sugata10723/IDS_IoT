@@ -9,27 +9,28 @@ from scipy.spatial import distance
 import sklearn.preprocessing as preprocessing
 import plotter 
 import matplotlib.pyplot as plt
-from sklearn.linear_model import Lasso
 
 #################################################################################   
 # パラメータ
 # k: クラスタ数
+# n_fi: 特徴量選択における重要な特徴量の数
+# n_pca: 特徴量選択におけるPCAによる特徴抽出の次元数
 # n_estimators: Isolation Forestの決定木の数
 # max_samples: Isolation Forestのサンプル数
 # contamination: Isolation Forestの外れ値の割合
 #################################################################################
 
 
-class AnomalyDetector_var:
-    def __init__(self, k=1, categorical_columns=None):
+class AnomalyDetector_PCA:
+    def __init__(self, k=1, n_pca=1, categorical_columns=None):
         self.k = k
         self.n_estimators = 50
         self.max_samples = 100
+        self.n_pca = n_pca
         self.categorical_columns = categorical_columns
         self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
         self.mm = preprocessing.MinMaxScaler()
-        self.important_features_attack = None
-        self.important_features_normal = None
+        self.pca = None
         self.sampled_attack = None
         self.sampled_normal = None
         self.iforest_attack = None
@@ -37,29 +38,20 @@ class AnomalyDetector_var:
         # プロットのため
         self.attack_data = None
         self.normal_data = None
-        self.attack_prd = None
         self.normal_prd = None
+        self.attack_prd = None
 
     def splitsubsystem(self, X, y):
         attack_indices = np.where(y == 1)[0]
         normal_indices = np.where(y == 0)[0]
         return X[attack_indices], X[normal_indices]
 
-    def feature_selection(self, data):
-        # 特徴量の分散を計算
-        variances = np.var(data, axis=0)
-        threshold = np.median(variances)
-        # 分散の分布を表示
-        plt.hist(variances, bins=50)
-        plt.title(f'Distribution of Feature Variances: median={round(threshold, 4)}')
-        plt.xlabel('Variance')
-        plt.ylabel('Frequency')
-        plt.show()
-        # 分散の中央値以上の分散を持つ特徴量を削除
-        important_features = np.where(variances > threshold)[0]
-        data_fi = data[:, important_features]
+    def feature_selection(self, numerical_data):
+        # 数値変数に対してPCAを用いて特徴量選択
+        pca = PCA(n_components=self.n_pca)
+        data_pca = pca.fit_transform(numerical_data)
 
-        return data_fi, important_features
+        return data_pca, pca
 
     def get_nearest_points(self, data, kmeans):
         nearest_points = []
@@ -88,16 +80,13 @@ class AnomalyDetector_var:
         # one-hotエンコード 入力：DataFrame　出力：ndarray
         X_ohe = self.ohe.fit_transform(X[self.categorical_columns])
         X_num = X.drop(columns=self.categorical_columns, inplace=False).values
-        print(f"X_ohe shape is: {X_ohe.shape[1]}")
-        print(f"X_num shape is: {X_num.shape[1]}")
         # 正規化 入力：ndarray　出力：ndarray
         X_num = self.mm.fit_transform(X_num)
-        X_processed = np.concatenate([X_num, X_ohe], axis=1)
+        # 特徴量選択 入力：ndarray 出力: ndarray
+        X_pca, self.pca, = self.feature_selection(X_num)
+        X_processed = np.concatenate([X_ohe, X_pca], axis=1)
         # サブシステムに分割 入力：ndarray　出力：ndarray
-        raw_attack_data, raw_normal_data = self.splitsubsystem(X_processed, y)
-        # 特徴量選択 入力：ndarray 出力：ndarray
-        self.attack_data, self.important_features_attack = self.feature_selection(raw_attack_data)
-        self.normal_data, self.important_features_normal = self.feature_selection(raw_normal_data)
+        self.attack_data, self.normal_data = self.splitsubsystem(X_processed, y)
         # サンプリング 入力：ndarray　出力：ndarray
         self.sampled_attack = self.make_cluster(self.attack_data)
         self.sampled_normal = self.make_cluster(self.normal_data)
@@ -108,8 +97,6 @@ class AnomalyDetector_var:
 
         
     def predict(self, X):
-        attack_results = []
-        normal_results = []
         predictions = []
         total_points = len(X)
 
@@ -117,19 +104,18 @@ class AnomalyDetector_var:
         # one-hotエンコード　入力：DataFrame　出力：ndarray
         X_ohe = self.ohe.transform(X[self.categorical_columns])
         X_num = X.drop(columns=self.categorical_columns, inplace=False).values
-        # 正規化　入力：ndarray　出力：ndarray
-        X_num = self.mm.transform(X_num)
-        X_processed = np.concatenate([X_num, X_ohe], axis=1)
-        # 特徴量選択 入力：ndarray 出力：ndarray
-        X_attack = X_processed[:, self.important_features_attack]
-        X_normal = X_processed[:, self.important_features_normal]     
-
+        # 正規化　入力：ndarray 出力：ndarray
+        X_num = self.mm.transform(X_num) # numeicalデータにだけでよい
+        # 特徴量選択 入力：ndarray 出力：ndarray    
+        X_num = self.pca.transform(X_num)
+        X_processed = np.concatenate([X_ohe, X_num], axis=1)
+    
         ## predict
-        attack_prd = self.iforest_attack.predict(X_attack)
+        attack_prd = self.iforest_attack.predict(X_processed)
         attack_prd = [1 if result == 1 else 0 for result in attack_prd]   
         self.attack_prd = attack_prd
         
-        normal_prd = self.iforest_normal.predict(X_normal)
+        normal_prd = self.iforest_normal.predict(X_processed)
         normal_prd = [1 if result == 1 else 0 for result in normal_prd]
         self.normal_prd = [0 if x == 1 else 1 for x in normal_prd] # normalの判定は逆になる
         
