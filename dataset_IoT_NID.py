@@ -19,26 +19,19 @@ class Dataset_IoT_NID:
 
     def __init__(self):
         self.CONFIG_FILE_PATH = os.path.join(self.BASE_DIR, 'config', 'config_IoT_NID.json')
+        self.DATA_CSV_FILE_PATH = f"{self.BASE_DIR}/data/IoTID20/IoT_Network_Intrusion_Dataset.csv"
         self.config = self.load_config()
-        self.DATA_CSV_FILE_PATH = f"{self.BASE_DIR}/data/IoT_Network_Intrusion_Dataset/IoT_Network_Intrusion_Dataset.csv"
-        self.data = None
-        self.X_train = None
-        self.X_test = None
-        self.y_train = None
-        self.y_test = None
-        self.labels = None
-
-        self.load_data()
-        self.split_data()
 
     def load_config(self):
         with open(self.CONFIG_FILE_PATH, 'r') as f:
             return json.load(f)
 
-    def split_data(self, test_size=0.3, random_state=42):
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.data, self.labels, test_size=test_size, random_state=random_state)
-        self.y_train = self.y_train.values # Pandas Series -> NumPy Array
-        self.y_test = self.y_test.values # Pandas Series -> NumPy Array
+    def split_data(self, data, labels, test_size=0.3, random_state=42):
+        X_train, X_test, y_train, y_test = train_test_split(data, labels, test_size=test_size, random_state=random_state)
+        y_train = y_train.values # Pandas Series -> NumPy Array
+        y_test = y_test.values # Pandas Series -> NumPy Array
+
+        return X_train, X_test, y_train, y_test
 
     def preprocess(self, data):
         # グローバル変数を変更しないようにコピー
@@ -61,11 +54,15 @@ class Dataset_IoT_NID:
         return data, labels
 
     def load_data(self):
-        self.data = pd.read_csv(self.DATA_CSV_FILE_PATH)
-        self.data, self.labels = self.preprocess(self.data)
+        data = pd.read_csv(self.DATA_CSV_FILE_PATH)
+        data, labels = self.preprocess(data)
+        return data, labels
 
     def get_data(self):
-        return self.X_train, self.X_test, self.y_train, self.y_test, self.config
+        data, labels = self.load_data()
+        X_train, X_test, y_train, y_test = self.split_data(data, labels)
+
+        return X_train, X_test, y_train, y_test, self.config
         
 
         

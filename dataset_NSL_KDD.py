@@ -18,15 +18,8 @@ class Dataset_NSL_KDD:
 
     def __init__(self):
         self.CONFIG_FILE_PATH = f"{self.BASE_DIR}/config/config_NSL_KDD.json"
-        self.config = self.load_config()
         self.DATA_TRAIN_FILE_PATH = f"{self.BASE_DIR}/data/NSL-KDD/KDDTrain+.txt"
         self.DATA_TEST_FILE_PATH = f"{self.BASE_DIR}/data/NSL-KDD/KDDTest+.txt"
-        self.X_train = None
-        self.X_test = None
-        self.y_train = None
-        self.y_test = None
-
-        self.load_data()
 
     def load_config(self):
         with open(self.CONFIG_FILE_PATH, 'r') as f:
@@ -54,12 +47,14 @@ class Dataset_NSL_KDD:
           "dst_host_srv_serror_rate","dst_host_rerror_rate","dst_host_srv_rerror_rate","label","difficulty"]
         
         # Load data from CSV file
-        self.X_train = pd.read_csv(self.DATA_TRAIN_FILE_PATH, sep=",", header=None, names=features)
-        self.X_test = pd.read_csv(self.DATA_TEST_FILE_PATH, sep=",", header=None, names=features)
+        X_train = pd.read_csv(self.DATA_TRAIN_FILE_PATH, sep=",", header=None, names=features)
+        X_test = pd.read_csv(self.DATA_TEST_FILE_PATH, sep=",", header=None, names=features)
 
         # Preprocess data
-        self.X_train, self.y_train = self.preprocess(self.X_train)
-        self.X_test, self.y_test = self.preprocess(self.X_test)
+        X_train, y_train = self.preprocess(X_train)
+        X_test, y_test = self.preprocess(X_test)
 
     def get_data(self):
-        return self.X_train, self.X_test, self.y_train, self.y_test, self.config
+        config = self.load_config()
+        X_train, X_test, y_train, y_test = self.load_data()
+        return X_train, X_test, y_train, y_test, config
