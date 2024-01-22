@@ -25,20 +25,20 @@ class Dataset_NSL_KDD:
         with open(self.CONFIG_FILE_PATH, 'r') as f:
             return json.load(f)
 
-    def preprocess(self, data):
+    def preprocess(self, data, config):
         # グローバル変数を変更しないようにコピー
         data = data.copy()
         # labelを正常:0, 攻撃:1に変換
         data['label'] = data['label'].apply(lambda x: 0 if x == 'normal' else 1)
         # 必要ない列を削除
-        data = data.drop(columns=self.config['unwanted_columns'])
+        data = data.drop(columns=config['unwanted_columns'])
         # ラベルを分割
         labels = data['label'] # Pandas Series 
         data = data.drop('label', axis=1) # Pandas DataFrame
 
         return data, labels
 
-    def load_data(self):
+    def load_data(self, config):
         features=["duration","protocol_type","service","flag","src_bytes","dst_bytes","land","wrong_fragment","urgent","hot",
           "num_failed_logins","logged_in","num_compromised","root_shell","su_attempted","num_root","num_file_creations","num_shells",
           "num_access_files","num_outbound_cmds","is_host_login","is_guest_login","count","srv_count","serror_rate","srv_serror_rate",
@@ -51,10 +51,10 @@ class Dataset_NSL_KDD:
         X_test = pd.read_csv(self.DATA_TEST_FILE_PATH, sep=",", header=None, names=features)
 
         # Preprocess data
-        X_train, y_train = self.preprocess(X_train)
-        X_test, y_test = self.preprocess(X_test)
+        X_train, y_train = self.preprocess(X_train, config)
+        X_test, y_test = self.preprocess(X_test, config)
 
     def get_data(self):
         config = self.load_config()
-        X_train, X_test, y_train, y_test = self.load_data()
+        X_train, X_test, y_train, y_test = self.load_data(config)
         return X_train, X_test, y_train, y_test, config

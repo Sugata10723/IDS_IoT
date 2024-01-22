@@ -25,7 +25,7 @@ class Dataset_UNSW_NB15:
         with open(self.CONFIG_FILE_PATH, 'r') as f:
             return json.load(f)
 
-    def preprocess(self, data):
+    def preprocess(self, data, config):
         # グローバル変数を変更しないようにコピー
         data = data.copy()
         nrows = self.nrows
@@ -34,7 +34,7 @@ class Dataset_UNSW_NB15:
             nrows = data.shape[0]
         data = data.sample(n=nrows)
         # 必要ない列を削除
-        data = data.drop(columns=self.config['unwanted_columns'])
+        data = data.drop(columns=config['unwanted_columns'])
         # インデックスをリセット
         data = data.reset_index()
         # labelとデータを分離 
@@ -43,18 +43,18 @@ class Dataset_UNSW_NB15:
         
         return data, labels
 
-    def load_data(self):
+    def load_data(self, config):
         data_train = pd.read_csv(self.DATA_TRAINING_FILE_PATH)
         data_test = pd.read_csv(self.DATA_TEST_FILE_PATH)
 
-        X_train, y_train = self.preprocess(data_train)
-        X_test, y_test = self.preprocess(data_test)
+        X_train, y_train = self.preprocess(data_train, config)
+        X_test, y_test = self.preprocess(data_test, config)
 
         return X_train, X_test, y_train, y_test
 
     def get_data(self):
         config = self.load_config()
-        X_train, X_test, y_train, y_test = self.load_data()
+        X_train, X_test, y_train, y_test = self.load_data(config)
         
         return X_train, X_test, y_train, y_test, config
 

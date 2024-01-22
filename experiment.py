@@ -11,7 +11,6 @@ from model_FI import AnomalyDetector_FI
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 from sklearn.model_selection import GridSearchCV
 
-
 class Experiment:
     def __init__(self, X_train, X_test, y_train, y_test, config):
         self.X_train = X_train # Pandas DataFrame
@@ -50,8 +49,8 @@ class Experiment:
         print("------------------------------")
         print(f"Feature selection: {title} k:{self.model.k}")
         print(f"Accuracy: {self.accuracy}")
-        print(f"Attack Accruracy: {attack_acu}")
-        print(f"Normal Accuracy: {normal_acu}")
+        print(f"Attack Subsystem Accuracy: {attack_acu}")
+        print(f"Normal Subsystem Accuracy: {normal_acu}")
         print(f"F1 Score: {self.f1}")
         print(f"F1 Score Attack: {f1_attack}")
         print(f"F1 Score Normal: {f1_normal}")
