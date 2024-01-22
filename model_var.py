@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import time
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import OneHotEncoder
@@ -78,13 +77,10 @@ class AnomalyDetector_var:
         if len(data) < self.k: # サンプル数がkより小さい場合はそのまま返す
             return data
         else:
-            start_time = time.time()
             kmeans = MiniBatchKMeans(n_clusters=self.k, init='k-means++', batch_size=100, tol=0.01, n_init=10) 
             clusters = kmeans.fit_predict(data)
-            print(f"K-means clustering time: {round(time.time() - start_time, 3)}sec")
-            data = np.column_stack((data, clusters)) 
+            data = np.column_stack((data, clusters))
             data_sampled = self.get_nearest_points(data, kmeans)
-            print(f"Sampling time: {round(time.time() - finish_kmeans, 3)}sec")
             return data_sampled
 
     def fit(self, X, y):
