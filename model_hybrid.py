@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.cluster import KMeans
+from sklearn.cluster import MiniBatchKMeans
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import OneHotEncoder
 import xgboost as xgb
@@ -64,13 +64,13 @@ class AnomalyDetector_hybrid:
         return data_fs, pca, important_features 
 
     def get_nearest_points(self, data, kmeans):
+        distances = kmeans.transform(data[:, :-1])
         nearest_points = []
-        for i, center in enumerate(kmeans.cluster_centers_):
-            cluster_data = data[data[:, -1] == i]
-            if len(cluster_data) > 0:  # k-meansの特性より、空のクラスタが存在する可能性がある
-                distances = np.linalg.norm(cluster_data[:, :-1] - center, axis=1)
-                nearest_point = np.argmin(distances)
-                nearest_points.append(cluster_data[nearest_point])
+        for i in range(kmeans.n_clusters):
+            cluster_indices = np.where(data[:, -1] == i)[0]
+            if len(cluster_indices) > 0:  # k-meansの特性より、空のクラスタが存在する可能性がある
+                nearest_index = cluster_indices[np.argmin(distances[cluster_indices, i])]
+                nearest_points.append(data[nearest_index])
         nearest_points = np.array(nearest_points)
         nearest_points = nearest_points[:, :-1]  # 'cluster' columnを削除
         return nearest_points
@@ -79,10 +79,13 @@ class AnomalyDetector_hybrid:
         if len(data) < self.k: # サンプル数がkより小さい場合はそのまま返す
             return data
         else:
-            kmeans = KMeans(n_clusters=self.k, n_init=10)
+            start_time = time.time()
+            kmeans = MiniBatchKMeans(n_clusters=self.k, init='k-means++', batch_size=100, tol=0.01, n_init=10) 
             clusters = kmeans.fit_predict(data)
+            print(f"K-means clustering time: {round(time.time() - start_time, 3)}sec")
             data = np.column_stack((data, clusters))  # 'cluster' columnを追加
             data_sampled = self.get_nearest_points(data, kmeans)
+            print(f"Sampling time: {round(time.time() - finish_kmeans, 3)}sec")
             return data_sampled
 
     def fit(self, X, y):

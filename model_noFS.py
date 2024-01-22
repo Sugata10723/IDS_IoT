@@ -1,15 +1,12 @@
 import pandas as pd
 import numpy as np
-from sklearn.cluster import KMeans
+import time
 from sklearn.ensemble import IsolationForest
+from sklearn.cluster import MiniBatchKMeans
 from sklearn.preprocessing import OneHotEncoder
-import xgboost as xgb
-from sklearn.decomposition import PCA
-from scipy.spatial import distance
 import sklearn.preprocessing as preprocessing
-import plotter 
-import matplotlib.pyplot as plt
 from sklearn_extra.cluster import KMedoids
+
 
 #################################################################################   
 # AnomalyDetector_noFS
@@ -44,13 +41,30 @@ class AnomalyDetector_noFS:
         normal_indices = np.where(y == 0)[0]
         return X[attack_indices], X[normal_indices]
 
+    def get_nearest_points(self, data, kmeans):
+        distances = kmeans.transform(data[:, :-1])
+        nearest_points = []
+        for i in range(kmeans.n_clusters):
+            cluster_indices = np.where(data[:, -1] == i)[0]
+            if len(cluster_indices) > 0:  # k-meansの特性より、空のクラスタが存在する可能性がある
+                nearest_index = cluster_indices[np.argmin(distances[cluster_indices, i])]
+                nearest_points.append(data[nearest_index])
+        nearest_points = np.array(nearest_points)
+        nearest_points = nearest_points[:, :-1]
+        return nearest_points
+
     def make_cluster(self, data):
         if len(data) < self.k: # サンプル数がkより小さい場合はそのまま返す
             return data
         else:
-            kmedoids = KMedoids(n_clusters=self.k, init='k-medoids++', random_state=0)
-            kmedoids.fit(data)
-            return kmedoids.cluster_centers_
+            start_time = time.time()
+            kmeans = MiniBatchKMeans(n_clusters=self.k, init='k-means++', batch_size=100, tol=0.01, n_init=10) 
+            clusters = kmeans.fit_predict(data)
+            print(f"K-means clustering time: {round(time.time() - start_time, 3)}sec")
+            data = np.column_stack((data, clusters))
+            data_sampled = self.get_nearest_points(data, kmeans)
+            print(f"Sampling time: {round(time.time() - finish_kmeans, 3)}sec")
+            return data_sampled
 
     def fit(self, X, y):
         ## Preprocessing X: Pandas DataFrame, y: NumPy Array
@@ -69,9 +83,8 @@ class AnomalyDetector_noFS:
         self.sampled_normal = self.make_cluster(self.normal_data)
     
         ## training 入力：ndarray
-        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=min(self.max_samples, len(self.sampled_attack))).fit(self.sampled_attack)
-        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=min(self.max_samples, len(self.sampled_normal))).fit(self.sampled_normal)
-
+        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=min(self.max_samples, len(self.sampled_attack)), verbose=1, warm_start=True).fit(self.sampled_attack)
+        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=min(self.max_samples, len(self.sampled_normal)), verbose=1, warm_start=True).fit(self.sampled_normal)
         
     def predict(self, X):
         attack_results = []
