@@ -5,11 +5,12 @@ from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import OneHotEncoder
 import xgboost as xgb
 from sklearn.decomposition import PCA
+from sklearn.feature_selection import VarianceThreshold
 from scipy.spatial import distance
 import sklearn.preprocessing as preprocessing
 import plotter 
 import matplotlib.pyplot as plt
-from sklearn.linear_model import Lasso
+from scipy import stats
 
 #################################################################################   
 # パラメータ
@@ -21,10 +22,12 @@ from sklearn.linear_model import Lasso
 
 
 class AnomalyDetector_var:
-    def __init__(self, k=1, categorical_columns=None):
+    def __init__(self, k, c_attack, c_normal, categorical_columns=None):
         self.k = k
         self.n_estimators = 50
         self.max_samples = 100
+        self.c_attack = c_attack
+        self.c_normal = c_normal
         self.categorical_columns = categorical_columns
         self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
         self.mm = preprocessing.MinMaxScaler()
@@ -46,17 +49,11 @@ class AnomalyDetector_var:
         return X[attack_indices], X[normal_indices]
 
     def feature_selection(self, data):
-        # 特徴量の分散を計算
-        variances = np.var(data, axis=0)
-        threshold = np.median(variances)
-        # 分散の分布を表示
-        plt.hist(variances, bins=50)
-        plt.title(f'Distribution of Feature Variances: median={round(threshold, 4)}')
-        plt.xlabel('Variance')
-        plt.ylabel('Frequency')
-        plt.show()
-        # 分散の中央値以上の分散を持つ特徴量を削除
-        important_features = np.where(variances > threshold)[0]
+        # 分散を計算して、小さいものから10個取得する
+        var = np.var(data, axis=0)
+        sorted_indices = np.argsort(var)
+        important_features = sorted_indices[:10]
+        print(f"important features are: {important_features}")
         data_fi = data[:, important_features]
 
         return data_fi, important_features
@@ -92,7 +89,8 @@ class AnomalyDetector_var:
         print(f"X_num shape is: {X_num.shape[1]}")
         # 正規化 入力：ndarray　出力：ndarray
         X_num = self.mm.fit_transform(X_num)
-        X_processed = np.concatenate([X_num, X_ohe], axis=1)
+        #X_processed = np.concatenate([X_num, X_ohe], axis=1)
+        X_processed = X_num
         # サブシステムに分割 入力：ndarray　出力：ndarray
         raw_attack_data, raw_normal_data = self.splitsubsystem(X_processed, y)
         # 特徴量選択 入力：ndarray 出力：ndarray
@@ -103,8 +101,8 @@ class AnomalyDetector_var:
         self.sampled_normal = self.make_cluster(self.normal_data)
     
         ## training 入力：ndarray
-        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=min(self.max_samples, len(self.sampled_attack))).fit(self.sampled_attack)
-        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=min(self.max_samples, len(self.sampled_normal))).fit(self.sampled_normal)
+        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=min(self.max_samples, len(self.sampled_attack)), contamination=self.c_attack).fit(self.sampled_attack)
+        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=min(self.max_samples, len(self.sampled_normal)), contamination=self.c_normal).fit(self.sampled_normal)
 
         
     def predict(self, X):
@@ -119,7 +117,8 @@ class AnomalyDetector_var:
         X_num = X.drop(columns=self.categorical_columns, inplace=False).values
         # 正規化　入力：ndarray　出力：ndarray
         X_num = self.mm.transform(X_num)
-        X_processed = np.concatenate([X_num, X_ohe], axis=1)
+        #X_processed = np.concatenate([X_num, X_ohe], axis=1)
+        X_processed = X_num
         # 特徴量選択 入力：ndarray 出力：ndarray
         X_attack = X_processed[:, self.important_features_attack]
         X_normal = X_processed[:, self.important_features_normal]     

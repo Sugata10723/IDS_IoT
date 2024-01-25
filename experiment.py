@@ -55,24 +55,28 @@ class Experiment:
         print(f"F1 Score Attack: {f1_attack}")
         print(f"F1 Score Normal: {f1_normal}")
         print(f"Fit Time: {fit_time}s")
-        print(f"Evaluate Time: {evaluate_time}s")
+        print(f"Evaluate Time for Total Data: {evaluate_time}s")
         print("------------------------------")
 
-    def run_noFS(self, k):
+    def run_noFS(self, k, c_attack, c_normal):
         model_params = {
             'k': k,
+            'c_attack': c_attack,
+            'c_normal': c_normal,
             'categorical_columns': self.config['categorical_columns']
         }
         self.model = AnomalyDetector_noFS(**model_params)
         self.fit()
         self.evaluate()
         self.print_results("noFS")
-        plotter.plot_confusion_matrix(self.y_test, self.prediction, self.model.attack_prd, self.model.normal_prd)
+        #plotter.plot_confusion_matrix(self.y_test, self.prediction, self.model.attack_prd, self.model.normal_prd)
 
-    def run_pca(self, k, n_pca):
+    def run_pca(self, k, n_pca, c_attack, c_normal):
         model_params = {
             'k': k,
             'n_pca': n_pca,
+            'c_attack': c_attack,
+            'c_normal': c_normal,
             'categorical_columns': self.config['categorical_columns']
         }
         self.model = AnomalyDetector_PCA(**model_params)
@@ -81,23 +85,27 @@ class Experiment:
         self.print_results(f"PCA, n_pca={n_pca}")
         plotter.plot_confusion_matrix(self.y_test, self.prediction, self.model.attack_prd, self.model.normal_prd)
 
-    def run_fi(self, k, n_fi):
+    def run_fi(self, k, n_fi, c_attack, c_normal):
         model_params = {
             'k': k,
             'n_fi': n_fi,
+            'c_attack': c_attack,
+            'c_normal': c_normal,
             'categorical_columns': self.config['categorical_columns']
         }
         self.model = AnomalyDetector_FI(**model_params)
         self.fit()
         self.evaluate()
         self.print_results(f"FI, n_fi={n_fi}")
-        #plotter.plot_confusion_matrix(self.y_test, self.prediction, self.model.attack_prd, self.model.normal_prd)
+        plotter.plot_confusion_matrix(self.y_test, self.prediction, self.model.attack_prd, self.model.normal_prd)
 
-    def run_hybrid(self, k, n_fi, n_pca):
+    def run_hybrid(self, k, n_fi, n_pca, c_attack, c_normal):
         model_params = {
             'k': k,
             'n_fi': n_fi,
             'n_pca': n_pca,
+            'c_attack': c_attack,
+            'c_normal': c_normal,
             'categorical_columns': self.config['categorical_columns']
         }
         self.model = AnomalyDetector_hybrid(**model_params)
@@ -106,9 +114,11 @@ class Experiment:
         self.print_results(f"hybrid, n_fi={n_fi}, n_pca={n_pca}")
         plotter.plot_confusion_matrix(self.y_test, self.prediction, self.model.attack_prd, self.model.normal_prd)
     
-    def run_var(self, k):
+    def run_var(self, k, c_attack, c_normal):
         model_params = {
             'k': k,
+            'c_attack': c_attack,
+            'c_normal': c_normal,
             'categorical_columns': self.config['categorical_columns']
         }
         self.model = AnomalyDetector_var(**model_params)

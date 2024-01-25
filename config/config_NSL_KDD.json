@@ -1,5 +1,6 @@
 {
     "unwanted_columns": [
+      "difficulty"
         ],
     "categorical_columns": [
       "service",

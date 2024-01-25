@@ -22,10 +22,12 @@ import matplotlib.pyplot as plt
 
 
 class AnomalyDetector_PCA:
-    def __init__(self, k=1, n_pca=1, categorical_columns=None):
+    def __init__(self, k, n_pca, c_attack, c_normal, categorical_columns=None):
         self.k = k
         self.n_estimators = 50
         self.max_samples = 100
+        self.c_attack = c_attack
+        self.c_normal = c_normal
         self.n_pca = n_pca
         self.categorical_columns = categorical_columns
         self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
@@ -92,8 +94,8 @@ class AnomalyDetector_PCA:
         self.sampled_normal = self.make_cluster(self.normal_data)
     
         ## training 入力：ndarray
-        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=min(self.max_samples, len(self.sampled_attack))).fit(self.sampled_attack)
-        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=min(self.max_samples, len(self.sampled_normal))).fit(self.sampled_normal)
+        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=min(self.max_samples, len(self.sampled_attack)), contamination=self.c_attack).fit(self.sampled_attack)
+        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=min(self.max_samples, len(self.sampled_normal)), contamination=self.c_normal).fit(self.sampled_normal)
 
         
     def predict(self, X):

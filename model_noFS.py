@@ -15,12 +15,15 @@ from sklearn_extra.cluster import KMedoids
 # k: クラスタ数
 # n_estimators: Isolation Forestの決定木の数
 # max_samples: Isolation Forestのサンプル数
+# contamination: Isolation Forestの異常スコアの閾値
 #################################################################################
 
 
 class AnomalyDetector_noFS:
-    def __init__(self, k=1, categorical_columns=None):
+    def __init__(self, k, c_attack, c_normal, categorical_columns=None):
         self.k = k
+        self.c_attack = c_attack
+        self.c_normal = c_normal
         self.n_estimators = 50
         self.max_samples = 100
         self.categorical_columns = categorical_columns
@@ -62,7 +65,7 @@ class AnomalyDetector_noFS:
             data = np.column_stack((data, clusters))
             data_sampled = self.get_nearest_points(data, kmeans)
             return data_sampled
-
+            
     def fit(self, X, y):
         ## Preprocessing X: Pandas DataFrame, y: NumPy Array
         # one-hotエンコード 入力：DataFrame　出力：ndarray
@@ -80,8 +83,8 @@ class AnomalyDetector_noFS:
         self.sampled_normal = self.make_cluster(self.normal_data)
     
         ## training 入力：ndarray
-        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=min(self.max_samples, len(self.sampled_attack)), verbose=1, warm_start=True).fit(self.sampled_attack)
-        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=min(self.max_samples, len(self.sampled_normal)), verbose=1, warm_start=True).fit(self.sampled_normal)
+        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=min(self.max_samples, len(self.sampled_attack)), contamination=self.c_attack).fit(self.sampled_attack)
+        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=min(self.max_samples, len(self.sampled_normal)), contamination=self.c_normal).fit(self.sampled_normal)
         
     def predict(self, X):
         attack_results = []
