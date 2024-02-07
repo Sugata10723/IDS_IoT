@@ -49,7 +49,7 @@ class Dataset_IoT_NID:
         # ラベルを分割
         labels = data['Label'] # Pandas Series 
         data = data.drop('Label', axis=1) # Pandas DataFrame
-
+        
         return data, labels
 
     def load_data(self, config):

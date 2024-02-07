@@ -74,7 +74,11 @@ class AnomalyDetector_hybrid:
                 nearest_index = cluster_indices[np.argmin(distances[cluster_indices, i])]
                 nearest_points.append(data[nearest_index])
         nearest_points = np.array(nearest_points)
-        nearest_points = nearest_points[:, :-1]  # 'cluster' columnを削除
+        # サンプリング数がクラスタ数より少ない場合は、足りない分をランダムサンプリング
+        if len(nearest_points) < self.k:
+            random_indices = np.random.choice(len(data), self.k - len(nearest_points), replace=False)
+            nearest_points = np.concatenate([nearest_points, data[random_indices]])
+        nearest_points = nearest_points[:, :-1] 
         return nearest_points
 
     def make_cluster(self, data):
@@ -85,6 +89,7 @@ class AnomalyDetector_hybrid:
             clusters = kmeans.fit_predict(data)
             data = np.column_stack((data, clusters))  # 'cluster' columnを追加
             data_sampled = self.get_nearest_points(data, kmeans)
+            print(f"sampled data is :{data_sampled.shape}")
             return data_sampled
 
     def fit(self, X, y):

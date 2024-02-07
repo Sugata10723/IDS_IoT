@@ -6,8 +6,7 @@ import matplotlib.pyplot as plt
 from model_noFS import AnomalyDetector_noFS
 from model_hybrid import AnomalyDetector_hybrid
 from model_var import AnomalyDetector_var
-from model_PCA import AnomalyDetector_PCA
-from model_FI import AnomalyDetector_FI
+from model_mean import AnomalyDetector_mean
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 from sklearn.model_selection import GridSearchCV
 
@@ -49,13 +48,13 @@ class Experiment:
         print("------------------------------")
         print(f"Feature selection: {title} k:{self.model.k}")
         print(f"Accuracy: {self.accuracy}")
-        print(f"Attack Subsystem Accuracy: {attack_acu}")
-        print(f"Normal Subsystem Accuracy: {normal_acu}")
+        print(f"Accuracy in Attack Subsystem: {attack_acu}")
+        print(f"Accuracy in Normal Subsystem: {normal_acu}")
         print(f"F1 Score: {self.f1}")
-        print(f"F1 Score Attack: {f1_attack}")
-        print(f"F1 Score Normal: {f1_normal}")
+        print(f"F1 Score in Attack Subsystem: {f1_attack}")
+        print(f"F1 Score in Normal Subsystem: {f1_normal}")
         print(f"Fit Time: {fit_time}s")
-        print(f"Evaluate Time for Total Data: {evaluate_time}s")
+        print(f"Evaluate Time per Data: {round(evaluate_time / self.X_test.shape[0] * 1000000, 2)}us")
         print("------------------------------")
 
     def run_noFS(self, k, c_attack, c_normal):
@@ -69,34 +68,19 @@ class Experiment:
         self.fit()
         self.evaluate()
         self.print_results("noFS")
-        #plotter.plot_confusion_matrix(self.y_test, self.prediction, self.model.attack_prd, self.model.normal_prd)
-
-    def run_pca(self, k, n_pca, c_attack, c_normal):
-        model_params = {
-            'k': k,
-            'n_pca': n_pca,
-            'c_attack': c_attack,
-            'c_normal': c_normal,
-            'categorical_columns': self.config['categorical_columns']
-        }
-        self.model = AnomalyDetector_PCA(**model_params)
-        self.fit()
-        self.evaluate()
-        self.print_results(f"PCA, n_pca={n_pca}")
         plotter.plot_confusion_matrix(self.y_test, self.prediction, self.model.attack_prd, self.model.normal_prd)
 
-    def run_fi(self, k, n_fi, c_attack, c_normal):
+    def run_mean(self, k, c_attack, c_normal):
         model_params = {
             'k': k,
-            'n_fi': n_fi,
             'c_attack': c_attack,
             'c_normal': c_normal,
             'categorical_columns': self.config['categorical_columns']
         }
-        self.model = AnomalyDetector_FI(**model_params)
+        self.model = AnomalyDetector_mean(**model_params)
         self.fit()
         self.evaluate()
-        self.print_results(f"FI, n_fi={n_fi}")
+        self.print_results("mean")
         plotter.plot_confusion_matrix(self.y_test, self.prediction, self.model.attack_prd, self.model.normal_prd)
 
     def run_hybrid(self, k, n_fi, n_pca, c_attack, c_normal):

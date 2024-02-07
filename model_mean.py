@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import OneHotEncoder
-import xgboost as xgb
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.decomposition import PCA
 from scipy.spatial import distance
 import sklearn.preprocessing as preprocessing
@@ -21,18 +21,16 @@ import matplotlib.pyplot as plt
 #################################################################################
 
 
-class AnomalyDetector_PCA:
-    def __init__(self, k, n_pca, c_attack, c_normal, categorical_columns=None):
+class AnomalyDetector_mean:
+    def __init__(self, k, c_attack, c_normal, categorical_columns=None):
         self.k = k
-        self.n_estimators = 50
-        self.max_samples = 100
+        self.n_estimators = 100
+        self.max_samples = 500
         self.c_attack = c_attack
         self.c_normal = c_normal
-        self.n_pca = n_pca
         self.categorical_columns = categorical_columns
         self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
         self.mm = preprocessing.MinMaxScaler()
-        self.pca = None
         self.sampled_attack = None
         self.sampled_normal = None
         self.iforest_attack = None
@@ -48,12 +46,29 @@ class AnomalyDetector_PCA:
         normal_indices = np.where(y == 0)[0]
         return X[attack_indices], X[normal_indices]
 
-    def feature_selection(self, numerical_data):
-        # 数値変数に対してPCAを用いて特徴量選択
-        pca = PCA(n_components=self.n_pca)
-        data_pca = pca.fit_transform(numerical_data)
+    def select_features(self, data, y, title):
+        attack_indices = np.where(y == 1)[0]
+        normal_indices = np.where(y == 0)[0]
+        attack_data = data[attack_indices]
+        normal_data = data[normal_indices]
+        attack_mean = np.mean(attack_data, axis=0)
+        normal_mean = np.mean(normal_data, axis=0)
+        diff = np.abs(attack_mean - normal_mean)
+        # 閾値を超える特徴量を選択
+        threshold = 0.5
+        important_features = np.where(diff > threshold)[0]
+        selected_data = data[:, important_features]
+        plt.bar(range(len(diff)), diff)
+        plt.title(title)
+        plt.show()
+        return selected_data, important_features
 
-        return data_pca, pca
+    def feature_selection(self, categorical_data, numerical_data, y):
+        data_ohe, important_features_ohe = self.select_features(categorical_data, y, "Categorical Feature Importance")
+        data_num, important_features_num = self.select_features(numerical_data, y, "Numerical Feature Importance")
+        data_fs = np.concatenate([data_ohe, data_num], axis=1)
+        
+        return data_fs, important_features_ohe, important_features_num
 
     def get_nearest_points(self, data, kmeans):
         distances = kmeans.transform(data[:, :-1])
@@ -64,7 +79,11 @@ class AnomalyDetector_PCA:
                 nearest_index = cluster_indices[np.argmin(distances[cluster_indices, i])]
                 nearest_points.append(data[nearest_index])
         nearest_points = np.array(nearest_points)
-        nearest_points = nearest_points[:, :-1]  # 'cluster' columnを削除
+        # サンプリング数がクラスタ数より少ない場合は、足りない分をランダムサンプリング
+        if len(nearest_points) < self.k:
+            random_indices = np.random.choice(len(data), self.k - len(nearest_points), replace=False)
+            nearest_points = np.concatenate([nearest_points, data[random_indices]])
+        nearest_points = nearest_points[:, :-1] 
         return nearest_points
 
     def make_cluster(self, data):
@@ -73,8 +92,9 @@ class AnomalyDetector_PCA:
         else:
             kmeans = MiniBatchKMeans(n_clusters=self.k, init='k-means++', batch_size=100, tol=0.01, n_init=10) 
             clusters = kmeans.fit_predict(data)
-            data = np.column_stack((data, clusters))
+            data = np.column_stack((data, clusters))  # 'cluster' columnを追加
             data_sampled = self.get_nearest_points(data, kmeans)
+            print(f"sampled data is :{data_sampled.shape}")
             return data_sampled
 
     def fit(self, X, y):
@@ -85,17 +105,16 @@ class AnomalyDetector_PCA:
         # 正規化 入力：ndarray　出力：ndarray
         X_num = self.mm.fit_transform(X_num)
         # 特徴量選択 入力：ndarray 出力: ndarray
-        X_pca, self.pca, = self.feature_selection(X_num)
-        X_processed = np.concatenate([X_ohe, X_pca], axis=1)
+        X_fs, self.f_ohe, self.f_num = self.feature_selection(X_ohe, X_num, y)
         # サブシステムに分割 入力：ndarray　出力：ndarray
-        self.attack_data, self.normal_data = self.splitsubsystem(X_processed, y)
+        self.attack_data, self.normal_data = self.splitsubsystem(X_fs, y)
         # サンプリング 入力：ndarray　出力：ndarray
         self.sampled_attack = self.make_cluster(self.attack_data)
         self.sampled_normal = self.make_cluster(self.normal_data)
     
         ## training 入力：ndarray
-        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=min(self.max_samples, len(self.sampled_attack)), contamination=self.c_attack).fit(self.sampled_attack)
-        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=min(self.max_samples, len(self.sampled_normal)), contamination=self.c_normal).fit(self.sampled_normal)
+        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, contamination=self.c_attack).fit(self.sampled_attack)
+        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, contamination=self.c_normal).fit(self.sampled_normal)
 
         
     def predict(self, X):
@@ -109,7 +128,8 @@ class AnomalyDetector_PCA:
         # 正規化　入力：ndarray 出力：ndarray
         X_num = self.mm.transform(X_num) # numeicalデータにだけでよい
         # 特徴量選択 入力：ndarray 出力：ndarray    
-        X_num = self.pca.transform(X_num)
+        X_ohe = X_ohe[:, self.f_ohe]
+        X_num = X_num[:, self.f_num]
         X_processed = np.concatenate([X_ohe, X_num], axis=1)
     
         ## predict
