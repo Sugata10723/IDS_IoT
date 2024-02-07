@@ -70,9 +70,10 @@ class Experiment:
         self.print_results("noFS")
         plotter.plot_confusion_matrix(self.y_test, self.prediction, self.model.attack_prd, self.model.normal_prd)
 
-    def run_mean(self, k, c_attack, c_normal):
+    def run_mean(self, k, n_features, c_attack, c_normal):
         model_params = {
             'k': k,
+            'n_features': n_features,
             'c_attack': c_attack,
             'c_normal': c_normal,
             'categorical_columns': self.config['categorical_columns']

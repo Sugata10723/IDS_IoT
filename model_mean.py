@@ -22,12 +22,13 @@ import matplotlib.pyplot as plt
 
 
 class AnomalyDetector_mean:
-    def __init__(self, k, c_attack, c_normal, categorical_columns=None):
+    def __init__(self, k, n_features, c_attack, c_normal, categorical_columns=None):
         self.k = k
         self.n_estimators = 100
-        self.max_samples = 500
+        self.max_features = 2
         self.c_attack = c_attack
         self.c_normal = c_normal
+        self.n_features = n_features
         self.categorical_columns = categorical_columns
         self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
         self.mm = preprocessing.MinMaxScaler()
@@ -54,9 +55,8 @@ class AnomalyDetector_mean:
         attack_mean = np.mean(attack_data, axis=0)
         normal_mean = np.mean(normal_data, axis=0)
         diff = np.abs(attack_mean - normal_mean)
-        # 閾値を超える特徴量を選択
-        threshold = 0.5
-        important_features = np.where(diff > threshold)[0]
+        # 平均値の差が大きい順に5つの特徴量を選択
+        important_features = np.argsort(diff)[::-1][:self.n_features]
         selected_data = data[:, important_features]
         plt.bar(range(len(diff)), diff)
         plt.title(title)
@@ -113,9 +113,8 @@ class AnomalyDetector_mean:
         self.sampled_normal = self.make_cluster(self.normal_data)
     
         ## training 入力：ndarray
-        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, contamination=self.c_attack).fit(self.sampled_attack)
-        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, contamination=self.c_normal).fit(self.sampled_normal)
-
+        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_attack).fit(self.sampled_attack)
+        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_normal).fit(self.sampled_normal)
         
     def predict(self, X):
         predictions = []
