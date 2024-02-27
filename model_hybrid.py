@@ -44,6 +44,7 @@ class AnomalyDetector_hybrid:
         self.normal_data = None
         self.normal_prd = None
         self.attack_prd = None
+        self.X_processed = None
 
     def splitsubsystem(self, X, y):
         attack_indices = np.where(y == 1)[0]
@@ -108,8 +109,8 @@ class AnomalyDetector_hybrid:
         self.sampled_normal = self.make_cluster(self.normal_data)
     
         ## training 入力：ndarray
-        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_attack).fit(self.sampled_attack)
-        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_normal).fit(self.sampled_normal)
+        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=256, max_features=self.max_features, contamination=self.c_attack).fit(self.sampled_attack)
+        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=256, max_features=self.max_features, contamination=self.c_normal).fit(self.sampled_normal)
 
         
     def predict(self, X):
@@ -125,14 +126,14 @@ class AnomalyDetector_hybrid:
         # 特徴量選択 入力：ndarray 出力：ndarray    
         X_ohe = X_ohe[:, self.important_features]
         X_num = self.pca.transform(X_num)
-        X_processed = np.concatenate([X_ohe, X_num], axis=1)
+        self.X_processed = np.concatenate([X_ohe, X_num], axis=1)
     
         ## predict
-        attack_prd = self.iforest_attack.predict(X_processed)
+        attack_prd = self.iforest_attack.predict(self.X_processed)
         attack_prd = [1 if result == 1 else 0 for result in attack_prd]   
         self.attack_prd = attack_prd
         
-        normal_prd = self.iforest_normal.predict(X_processed)
+        normal_prd = self.iforest_normal.predict(self.X_processed)
         normal_prd = [1 if result == 1 else 0 for result in normal_prd]
         self.normal_prd = [0 if x == 1 else 1 for x in normal_prd] # normalの判定は逆になる
         
@@ -145,3 +146,11 @@ class AnomalyDetector_hybrid:
                 predictions.append(1)
 
         return predictions
+
+    def plot_anomaly_scores(self):
+        scores_attack = self.iforest_attack.decision_function(self.X_processed)
+        scores_normal = self.iforest_normal.decision_function(self.X_processed)
+        plt.hist(scores_attack, bins=50, alpha=0.5, label='attack')
+        plt.hist(scores_normal, bins=50, alpha=0.5, label='normal')
+        plt.legend()
+        plt.show()

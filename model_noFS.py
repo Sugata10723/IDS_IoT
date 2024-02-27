@@ -67,7 +67,6 @@ class AnomalyDetector_noFS:
             clusters = kmeans.fit_predict(data)
             data = np.column_stack((data, clusters))
             data_sampled = self.get_nearest_points(data, kmeans)
-            print(f"sampled Data shape is: {data_sampled.shape}")
             return data_sampled
 
     def preprocess(self, X, if_train):
@@ -75,7 +74,9 @@ class AnomalyDetector_noFS:
         if if_train==True:
             self.ohe.fit(X[self.categorical_columns])
         X_ohe = self.ohe.transform(X[self.categorical_columns])
+        print(f"ohe shape is {X_ohe.shape}")
         X_num = X.drop(columns=self.categorical_columns).values
+        print(f"num shape is {X_num.shape}")
         # 正規化 入力：ndarray　出力：ndarray
         X_num = self.mm.fit_transform(X_num)
         X_processed = np.concatenate([X_num, X_ohe], axis=1)

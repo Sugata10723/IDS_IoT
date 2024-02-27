@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 
 
 class AnomalyDetector_mean:
-    def __init__(self, k, n_features, c_attack, c_normal, categorical_columns=None):
+    def __init__(self, k, n_features, c_attack, c_normal, categorical_columns):
         self.k = k
         self.n_estimators = 100
         self.max_features = 2
@@ -41,6 +41,7 @@ class AnomalyDetector_mean:
         self.normal_data = None
         self.normal_prd = None
         self.attack_prd = None
+        self.X_processed = None
 
     def splitsubsystem(self, X, y):
         attack_indices = np.where(y == 1)[0]
@@ -55,7 +56,7 @@ class AnomalyDetector_mean:
         attack_mean = np.mean(attack_data, axis=0)
         normal_mean = np.mean(normal_data, axis=0)
         diff = np.abs(attack_mean - normal_mean)
-        # 平均値の差が大きい順に5つの特徴量を選択
+        # 平均値の差が大きい順にn_featuresぶんの特徴量を選択
         important_features = np.argsort(diff)[::-1][:self.n_features]
         selected_data = data[:, important_features]
         plt.bar(range(len(diff)), diff)
@@ -113,8 +114,8 @@ class AnomalyDetector_mean:
         self.sampled_normal = self.make_cluster(self.normal_data)
     
         ## training 入力：ndarray
-        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_attack).fit(self.sampled_attack)
-        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_normal).fit(self.sampled_normal)
+        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=256, max_features=self.max_features, contamination=self.c_attack).fit(self.sampled_attack)
+        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=256, max_features=self.max_features, contamination=self.c_normal).fit(self.sampled_normal)
         
     def predict(self, X):
         predictions = []
@@ -129,14 +130,14 @@ class AnomalyDetector_mean:
         # 特徴量選択 入力：ndarray 出力：ndarray    
         X_ohe = X_ohe[:, self.f_ohe]
         X_num = X_num[:, self.f_num]
-        X_processed = np.concatenate([X_ohe, X_num], axis=1)
+        self.X_processed = np.concatenate([X_ohe, X_num], axis=1)
     
         ## predict
-        attack_prd = self.iforest_attack.predict(X_processed)
+        attack_prd = self.iforest_attack.predict(self.X_processed)
         attack_prd = [1 if result == 1 else 0 for result in attack_prd]   
         self.attack_prd = attack_prd
         
-        normal_prd = self.iforest_normal.predict(X_processed)
+        normal_prd = self.iforest_normal.predict(self.X_processed)
         normal_prd = [1 if result == 1 else 0 for result in normal_prd]
         self.normal_prd = [0 if x == 1 else 1 for x in normal_prd] # normalの判定は逆になる
         
@@ -149,3 +150,12 @@ class AnomalyDetector_mean:
                 predictions.append(1)
 
         return predictions
+    
+    def plot_anomaly_scores(self):
+        scores_attack = self.iforest_attack.decision_function(self.X_processed)
+        scores_normal = self.iforest_normal.decision_function(self.X_processed)
+        plt.hist(scores_attack, bins=50, alpha=0.5, label='attack')
+        plt.hist(scores_normal, bins=50, alpha=0.5, label='normal')
+        plt.legend()
+        plt.show()
+

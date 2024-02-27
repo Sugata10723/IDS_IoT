@@ -22,10 +22,12 @@ from scipy import stats
 
 
 class AnomalyDetector_var:
-    def __init__(self, k, c_attack, c_normal, categorical_columns=None):
+    def __init__(self, k, n_ohe, n_num, c_attack, c_normal, categorical_columns=None):
         self.k = k
         self.n_estimators = 100
         self.max_features = 2
+        self.n_ohe = n_ohe
+        self.n_num = n_num
         self.c_attack = c_attack
         self.c_normal = c_normal
         self.categorical_columns = categorical_columns
@@ -44,6 +46,8 @@ class AnomalyDetector_var:
         self.normal_data = None
         self.attack_prd = None
         self.normal_prd = None
+        self.X_attack = None
+        self.X_normal = None
 
     def splitsubsystem(self, X, y):
         attack_indices = np.where(y == 1)[0]
@@ -54,23 +58,18 @@ class AnomalyDetector_var:
         #最初に分散が0のデータを消す
         X_num = X_num[:, X_num.var(axis=0) != 0]
         X_ohe = X_ohe[:, X_ohe.var(axis=0) != 0]
-        # 数値データに対して分散を計算し、閾値より小さい特徴量を選択
-        vt = VarianceThreshold()
-        t_num = 0.05
-        vt.fit(X_num)
-        features_num = np.where(vt.variances_ < t_num)[0]
-        plt.figure(figsize=(10, 5))
-        plt.bar(range(len(vt.variances_)), vt.variances_)
-        plt.title('num Variance')
-        plt.show()
+        # 数値データに対して分散を計算し、小さい特徴量を順にself.n_num個選択
+        var_num = np.var(X_num, axis=0)
+        features_num = np.argsort(var_num)[:self.n_num]
+        # 分散の小さい順に特徴量の一次元プロットグラフを表示
+        #for i in range(len(features_num)):
+            #plt.figure(figsize=(10, 5))
+            #plt.scatter(X_num[:, features_num[i]], np.zeros(len(X_num)))
+            #plt.title(f'feature {features_num[i]}')
+            #plt.show()
         # カテゴリデータに対しても同様
-        vt.fit(X_ohe)
-        t_ohe = 0.05
-        features_ohe = np.where(vt.variances_ < t_ohe)[0]
-        plt.figure(figsize=(10, 5))
-        plt.bar(range(len(vt.variances_)), vt.variances_)
-        plt.title('ohe Variance')
-        plt.show()
+        var_ohe = np.var(X_ohe, axis=0)
+        features_ohe = np.argsort(var_ohe)[:self.n_ohe]
         # 選択された特徴量を用いてデータを結合
         data_fi = np.concatenate([X_ohe[:, features_ohe], X_num[:, features_num]], axis=1)
 
@@ -121,8 +120,8 @@ class AnomalyDetector_var:
         self.sampled_normal = self.make_cluster(self.normal_data)
     
         ## training 入力：ndarray
-        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_attack).fit(self.sampled_attack)
-        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_normal).fit(self.sampled_normal)
+        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=256, max_features=self.max_features, contamination=self.c_attack).fit(self.sampled_attack)
+        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=256, max_features=self.max_features, contamination=self.c_normal).fit(self.sampled_normal)
 
         
     def predict(self, X):
@@ -138,15 +137,15 @@ class AnomalyDetector_var:
         # 正規化　入力：ndarray　出力：ndarray
         X_num = self.mm.transform(X_num)
         # 特徴量選択 入力：ndarray 出力：ndarray
-        X_attack = np.concatenate([X_ohe[:, self.features_ohe_attack], X_num[:, self.features_num_attack]], axis=1)
-        X_normal = np.concatenate([X_ohe[:, self.features_ohe_normal], X_num[:, self.features_num_normal]], axis=1)
+        self.X_attack = np.concatenate([X_ohe[:, self.features_ohe_attack], X_num[:, self.features_num_attack]], axis=1)
+        self.X_normal = np.concatenate([X_ohe[:, self.features_ohe_normal], X_num[:, self.features_num_normal]], axis=1)
 
         ## predict
-        attack_prd = self.iforest_attack.predict(X_attack)
+        attack_prd = self.iforest_attack.predict(self.X_attack)
         attack_prd = [1 if result == 1 else 0 for result in attack_prd]   
         self.attack_prd = attack_prd
         
-        normal_prd = self.iforest_normal.predict(X_normal)
+        normal_prd = self.iforest_normal.predict(self.X_normal)
         normal_prd = [1 if result == 1 else 0 for result in normal_prd]
         self.normal_prd = [0 if x == 1 else 1 for x in normal_prd] # normalの判定は逆になる
         
@@ -159,3 +158,11 @@ class AnomalyDetector_var:
                 predictions.append(1)
 
         return predictions
+    
+    def plot_anomaly_scores(self):
+        scores_attack = self.iforest_attack.decision_function(self.X_attack)
+        scores_normal = self.iforest_normal.decision_function(self.X_normal)
+        plt.hist(scores_attack, bins=50, alpha=0.5, label='attack')
+        plt.hist(scores_normal, bins=50, alpha=0.5, label='normal')
+        plt.legend()
+        plt.show()

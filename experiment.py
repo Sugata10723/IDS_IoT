@@ -26,6 +26,7 @@ class Experiment:
         self.prediction = None
         self.accuracy = None
         self.f1 = None
+        self.evaluate_time_per_data = None
 
     def fit(self):
         start_time = time.perf_counter()
@@ -38,23 +39,23 @@ class Experiment:
         self.evaluate_time = time.perf_counter() - start_time
 
     def print_results(self, title):
-        self.accuracy, attack_acu, normal_acu = (round(metric, 2) for metric in 
+        self.accuracy, attack_acu, normal_acu = (metric for metric in 
                                             [accuracy_score(self.y_test, pred) for pred in 
                                             [self.prediction, self.model.attack_prd, self.model.normal_prd]])
-        self.f1, f1_attack, f1_normal = (round(metric, 2) for metric in 
+        self.f1, f1_attack, f1_normal = (metric for metric in 
                                     [f1_score(self.y_test, pred, average='weighted') for pred in 
                                     [self.prediction, self.model.attack_prd, self.model.normal_prd]])
-        fit_time, evaluate_time = round(self.fit_time, 2), round(self.evaluate_time, 2)
+        fit_time, self.evaluate_time_per_data = self.fit_time, self.evaluate_time / self.X_test.shape[0] * 1000000
         print("------------------------------")
         print(f"Feature selection: {title} k:{self.model.k}")
-        print(f"Accuracy: {self.accuracy}")
-        print(f"Accuracy in Attack Subsystem: {attack_acu}")
-        print(f"Accuracy in Normal Subsystem: {normal_acu}")
-        print(f"F1 Score: {self.f1}")
-        print(f"F1 Score in Attack Subsystem: {f1_attack}")
-        print(f"F1 Score in Normal Subsystem: {f1_normal}")
-        print(f"Fit Time: {fit_time}s")
-        print(f"Evaluate Time per Data: {round(evaluate_time / self.X_test.shape[0] * 1000000, 2)}us")
+        print(f"Accuracy: {format(self.accuracy, '.3f')}")
+        print(f"Accuracy in Attack Subsystem: {format(attack_acu, '.3f')}")
+        print(f"Accuracy in Normal Subsystem: {format(normal_acu, '.3f')}")
+        print(f"F1 Score: {format(self.f1, '.3f')}")
+        print(f"F1 Score in Attack Subsystem: {format(f1_attack, '.3f')}")
+        print(f"F1 Score in Normal Subsystem: {format(f1_normal, '.3f')}")
+        print(f"Fit Time: {format(fit_time, '.0f')}s")
+        print(f"Evaluate Time per Data: {format(self.evaluate_time_per_data, '.1f')}us")
         print("------------------------------")
 
     def run_noFS(self, k, c_attack, c_normal):
@@ -68,7 +69,8 @@ class Experiment:
         self.fit()
         self.evaluate()
         self.print_results("noFS")
-        plotter.plot_confusion_matrix(self.y_test, self.prediction, self.model.attack_prd, self.model.normal_prd)
+        #plotter.plot_confusion_matrix(self.y_test, self.prediction, self.model.attack_prd, self.model.normal_prd)
+        return self.evaluate_time_per_data, self.accuracy, self.f1
 
     def run_mean(self, k, n_features, c_attack, c_normal):
         model_params = {
@@ -83,6 +85,8 @@ class Experiment:
         self.evaluate()
         self.print_results("mean")
         plotter.plot_confusion_matrix(self.y_test, self.prediction, self.model.attack_prd, self.model.normal_prd)
+        self.model.plot_anomaly_scores()
+        return self.evaluate_time_per_data, self.accuracy, self.f1
 
     def run_hybrid(self, k, n_fi, n_pca, c_attack, c_normal):
         model_params = {
@@ -98,10 +102,14 @@ class Experiment:
         self.evaluate()
         self.print_results(f"hybrid, n_fi={n_fi}, n_pca={n_pca}")
         plotter.plot_confusion_matrix(self.y_test, self.prediction, self.model.attack_prd, self.model.normal_prd)
-    
-    def run_var(self, k, c_attack, c_normal):
+        self.model.plot_anomaly_scores()
+        return self.evaluate_time_per_data, self.accuracy, self.f1
+
+    def run_var(self, k, n_ohe, n_num, c_attack, c_normal):
         model_params = {
             'k': k,
+            'n_ohe': n_ohe,
+            'n_num': n_num,
             'c_attack': c_attack,
             'c_normal': c_normal,
             'categorical_columns': self.config['categorical_columns']
@@ -111,6 +119,8 @@ class Experiment:
         self.evaluate()
         self.print_results("Variance")
         plotter.plot_confusion_matrix(self.y_test, self.prediction, self.model.attack_prd, self.model.normal_prd)
+        self.model.plot_anomaly_scores()
+        return self.evaluate_time_per_data, self.accuracy, self.f1
 
 
 
