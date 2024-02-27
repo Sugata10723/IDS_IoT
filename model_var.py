@@ -24,7 +24,7 @@ from scipy import stats
 class AnomalyDetector_var:
     def __init__(self, k, n_ohe, n_num, c_attack, c_normal, categorical_columns=None):
         self.k = k
-        self.n_estimators = 100
+        self.n_estimators = 50
         self.max_features = 2
         self.n_ohe = n_ohe
         self.n_num = n_num
@@ -120,8 +120,8 @@ class AnomalyDetector_var:
         self.sampled_normal = self.make_cluster(self.normal_data)
     
         ## training 入力：ndarray
-        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=256, max_features=self.max_features, contamination=self.c_attack).fit(self.sampled_attack)
-        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=256, max_features=self.max_features, contamination=self.c_normal).fit(self.sampled_normal)
+        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_attack).fit(self.sampled_attack)
+        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_normal).fit(self.sampled_normal)
 
         
     def predict(self, X):

@@ -54,7 +54,7 @@ class Experiment:
         print(f"F1 Score: {format(self.f1, '.3f')}")
         print(f"F1 Score in Attack Subsystem: {format(f1_attack, '.3f')}")
         print(f"F1 Score in Normal Subsystem: {format(f1_normal, '.3f')}")
-        print(f"Fit Time: {format(fit_time, '.0f')}s")
+        print(f"Fit Time: {format(fit_time, '.1f')}s")
         print(f"Evaluate Time per Data: {format(self.evaluate_time_per_data, '.1f')}us")
         print("------------------------------")
 
