@@ -6,3 +6,4 @@ __pycache__
 mlruns/
 .ipynb_checkpoints/
 .gitignore
+pickles/
