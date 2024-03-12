@@ -47,8 +47,9 @@ class Dataset_UNSW_NB15:
     def get_data(self):
         config = self.load_config()
         X_train, X_test, y_train, y_test = self.load_data(config)
+        dataset = [X_train, X_test, y_train, y_test, config]
         
-        return X_train, X_test, y_train, y_test, config
+        return dataset
 
         
 

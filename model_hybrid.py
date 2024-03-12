@@ -22,23 +22,24 @@ import matplotlib.pyplot as plt
 
 
 class AnomalyDetector_hybrid:
-    def __init__(self, k, n_fi, n_pca, c_attack, c_normal, categorical_columns=None):
-        self.k = k
-        self.n_estimators = 50
-        self.max_features = 2
-        self.c_attack = c_attack
-        self.c_normal = c_normal
-        self.n_fi = n_fi
-        self.n_pca = n_pca
+    def __init__(self, parameters, categorical_columns):
+        self.k = parameters['k']
+        self.n_estimators = parameters['n_estimators']
+        self.max_features = parameters['max_features']
+        self.c_attack =  parameters['c_attack']
+        self.c_normal = parameters['c_normal']
+        self.n_fi = parameters['n_fi']
+        self.n_pca = parameters['n_pca']
         self.categorical_columns = categorical_columns
         self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
         self.mm = preprocessing.MinMaxScaler()
+        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_attack)
+        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_normal)
+        self.pca = PCA(n_components=self.n_pca)
+
         self.important_features = None
-        self.pca = None
         self.sampled_attack = None
         self.sampled_normal = None
-        self.iforest_attack = None
-        self.iforest_normal = None
         # プロットのため
         self.attack_data = None
         self.normal_data = None
@@ -59,12 +60,11 @@ class AnomalyDetector_hybrid:
         important_features = np.argsort(feature_importances)[::-1][:self.n_fi]
         data_fi = categorical_data[:, important_features]
         # 数値変数に対してPCAを用いて特徴量選択
-        pca = PCA(n_components=self.n_pca)
-        data_pca = pca.fit_transform(numerical_data)
+        data_pca = self.pca.fit_transform(numerical_data)
         # 特徴量選択後のデータを結合 出力：DataFrame
         data_fs = np.concatenate([data_fi, data_pca], axis=1)
 
-        return data_fs, pca, important_features 
+        return data_fs, important_features 
 
     def get_nearest_points(self, data, kmeans):
         distances = kmeans.transform(data[:, :-1])
@@ -101,7 +101,7 @@ class AnomalyDetector_hybrid:
         # 正規化 入力：ndarray　出力：ndarray
         X_num = self.mm.fit_transform(X_num)
         # 特徴量選択 入力：ndarray 出力: ndarray
-        X_fs, self.pca, self.important_features = self.feature_selection(X_ohe, X_num, y)
+        X_fs, self.important_features = self.feature_selection(X_ohe, X_num, y)
         # サブシステムに分割 入力：ndarray　出力：ndarray
         self.attack_data, self.normal_data = self.splitsubsystem(X_fs, y)
         # サンプリング 入力：ndarray　出力：ndarray
@@ -109,8 +109,8 @@ class AnomalyDetector_hybrid:
         self.sampled_normal = self.make_cluster(self.normal_data)
     
         ## training 入力：ndarray
-        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_attack).fit(self.sampled_attack)
-        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_normal).fit(self.sampled_normal)
+        self.iforest_attack.fit(self.sampled_attack)
+        self.iforest_normal.fit(self.sampled_normal)
 
         
     def predict(self, X):

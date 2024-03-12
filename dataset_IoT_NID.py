@@ -61,8 +61,9 @@ class Dataset_IoT_NID:
         config = self.load_config()
         data, labels = self.load_data(config)
         X_train, X_test, y_train, y_test = self.split_data(data, labels)
+        dataset = [X_train, X_test, y_train, y_test, config]
 
-        return X_train, X_test, y_train, y_test, config
+        return dataset
         
 
         

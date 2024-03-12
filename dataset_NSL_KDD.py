@@ -59,4 +59,6 @@ class Dataset_NSL_KDD:
     def get_data(self):
         config = self.load_config()
         X_train, X_test, y_train, y_test = self.load_data(config)
-        return X_train, X_test, y_train, y_test, config
+        dataset = [X_train, X_test, y_train, y_test, config]
+
+        return dataset

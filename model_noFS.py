@@ -20,19 +20,20 @@ from sklearn_extra.cluster import KMedoids
 
 
 class AnomalyDetector_noFS:
-    def __init__(self, k, c_attack, c_normal, categorical_columns=None):
-        self.k = k
-        self.c_attack = c_attack
-        self.c_normal = c_normal
-        self.n_estimators = 100
-        self.max_features = 2
+    def __init__(self, parameters, categorical_columns):
+        self.k = parameters['k']
+        self.c_attack = parameters['c_attack']
+        self.c_normal = parameters['c_normal']
+        self.n_estimators = parameters['n_estimators']
+        self.max_features = parameters['max_features']
         self.categorical_columns = categorical_columns
         self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
         self.mm = preprocessing.MinMaxScaler()
+        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_attack)
+        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_normal)
+
         self.sampled_attack = None
         self.sampled_normal = None
-        self.iforest_attack = None
-        self.iforest_normal = None
         # プロットのため
         self.attack_data = None
         self.normal_data = None
@@ -91,8 +92,8 @@ class AnomalyDetector_noFS:
         self.sampled_attack = self.make_cluster(self.attack_data)
         self.sampled_normal = self.make_cluster(self.normal_data)    
         # トレーニング 入力：ndarray
-        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_attack).fit(self.sampled_attack)
-        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_normal).fit(self.sampled_normal)
+        self.iforest_attack.fit(self.sampled_attack)
+        self.iforest_normal.fit(self.sampled_normal)
         
     def predict(self, X):
         attack_results = []
