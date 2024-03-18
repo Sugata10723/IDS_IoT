@@ -57,6 +57,7 @@ class Experiment:
         if if_plot:
             self.print_results("noFS")
             plotter.plot_confusion_matrix(self.y_test, self.prediction, self.model.attack_prd, self.model.normal_prd)
+            self.model.plot_anomaly_scores()
 
     def run_mean(self, model_params, if_plot):
         self.model = AnomalyDetector_mean(model_params, self.config['categorical_columns'])

@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import time
+import plotter 
+import matplotlib.pyplot as plt
 from sklearn.ensemble import IsolationForest
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.preprocessing import OneHotEncoder
@@ -26,11 +28,13 @@ class AnomalyDetector_noFS:
         self.c_normal = parameters['c_normal']
         self.n_estimators = parameters['n_estimators']
         self.max_features = parameters['max_features']
+        self.max_samples = parameters['max_samples']
+        self.if_sampling = parameters['if_sampling']
         self.categorical_columns = categorical_columns
         self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
         self.mm = preprocessing.MinMaxScaler()
-        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_attack)
-        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_normal)
+        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=self.max_samples, max_features=self.max_features, contamination=self.c_attack, bootstrap=True, n_jobs=-1, random_state=42, verbose=10, warm_start=True)
+        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=self.max_samples, max_features=self.max_features, contamination=self.c_normal, bootstrap=True, n_jobs=-1, random_state=42, verbose=10, warm_start=True)
 
         self.sampled_attack = None
         self.sampled_normal = None
@@ -39,6 +43,7 @@ class AnomalyDetector_noFS:
         self.normal_data = None
         self.attack_prd = None
         self.normal_prd = None
+        self.X_processed = None
 
     def splitsubsystem(self, X, y):
         attack_indices = np.where(y == 1)[0]
@@ -61,23 +66,21 @@ class AnomalyDetector_noFS:
         return nearest_points
 
     def make_cluster(self, data):
-        if len(data) < self.k: # サンプル数がkより小さい場合はそのまま返す
-            return data
-        else:
+        if len(data) > self.k and self.if_sampling == True:
             kmeans = MiniBatchKMeans(n_clusters=self.k, init='k-means++', batch_size=100, tol=0.01, n_init=10) 
             clusters = kmeans.fit_predict(data)
             data = np.column_stack((data, clusters))
             data_sampled = self.get_nearest_points(data, kmeans)
             return data_sampled
+        else:
+            return data
 
     def preprocess(self, X, if_train):
         # one-hotエンコード 入力：DataFrame　出力：ndarray
-        if if_train==True:
+        if if_train==True: # 学習時
             self.ohe.fit(X[self.categorical_columns])
         X_ohe = self.ohe.transform(X[self.categorical_columns])
-        print(f"ohe shape is {X_ohe.shape}")
         X_num = X.drop(columns=self.categorical_columns).values
-        print(f"num shape is {X_num.shape}")
         # 正規化 入力：ndarray　出力：ndarray
         X_num = self.mm.fit_transform(X_num)
         X_processed = np.concatenate([X_num, X_ohe], axis=1)
@@ -102,13 +105,13 @@ class AnomalyDetector_noFS:
         total_points = len(X)
 
         # 前処理
-        X_processed = self.preprocess(X, if_train=False)
+        self.X_processed = self.preprocess(X, if_train=False)
         # 予測
-        attack_prd = self.iforest_attack.predict(X_processed)
+        attack_prd = self.iforest_attack.predict(self.X_processed)
         attack_prd = [1 if result == 1 else 0 for result in attack_prd]   
         self.attack_prd = attack_prd
         
-        normal_prd = self.iforest_normal.predict(X_processed)
+        normal_prd = self.iforest_normal.predict(self.X_processed)
         normal_prd = [1 if result == 1 else 0 for result in normal_prd]
         self.normal_prd = [0 if x == 1 else 1 for x in normal_prd] # normalの判定は逆になる
         
@@ -121,3 +124,11 @@ class AnomalyDetector_noFS:
                 predictions.append(1)
 
         return predictions
+
+    def plot_anomaly_scores(self):
+        scores_attack = self.iforest_attack.decision_function(self.X_processed)
+        scores_normal = self.iforest_normal.decision_function(self.X_processed)
+        plt.hist(scores_attack, bins=50, alpha=0.5, label='attack')
+        plt.hist(scores_normal, bins=50, alpha=0.5, label='normal')
+        plt.legend()
+        plt.show()

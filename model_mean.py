@@ -31,11 +31,11 @@ class AnomalyDetector_mean:
         self.n_ohe = parameters['n_ohe']
         self.n_num = parameters['n_num']
         self.categorical_columns = categorical_columns
-        
-        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_attack)
-        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_normal)
+
         self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
         self.mm = preprocessing.MinMaxScaler()
+        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_attack)
+        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_normal)
         
         self.sampled_attack = None
         self.sampled_normal = None
@@ -59,8 +59,7 @@ class AnomalyDetector_mean:
         attack_mean = np.mean(attack_data, axis=0)
         normal_mean = np.mean(normal_data, axis=0)
         diff = np.abs(attack_mean - normal_mean)
-        # 平均値の差が大きい順にn_featuresぶんの特徴量を選択
-        important_features = np.argsort(diff)[::-1][:n_features]
+        important_features = np.argsort(diff)[::-1][:n_features] # 平均値の差が大きい順にn_featuresぶんの特徴量を選択
         selected_data = data[:, important_features]
         return selected_data, important_features
 
@@ -80,8 +79,7 @@ class AnomalyDetector_mean:
                 nearest_index = cluster_indices[np.argmin(distances[cluster_indices, i])]
                 nearest_points.append(data[nearest_index])
         nearest_points = np.array(nearest_points)
-        # サンプリング数がクラスタ数より少ない場合は、足りない分をランダムサンプリング
-        if len(nearest_points) < self.k:
+        if len(nearest_points) < self.k: # サンプリング数がクラスタ数より少ない場合は、足りない分をランダムサンプリングで埋める
             random_indices = np.random.choice(len(data), self.k - len(nearest_points), replace=False)
             nearest_points = np.concatenate([nearest_points, data[random_indices]])
         nearest_points = nearest_points[:, :-1] 
@@ -99,21 +97,14 @@ class AnomalyDetector_mean:
             return data_sampled
 
     def fit(self, X, y):
-        ## Preprocessing X: Pandas DataFrame, y: NumPy Array
-        # one-hotエンコード 入力：DataFrame　出力：ndarray
         X_ohe = self.ohe.fit_transform(X[self.categorical_columns])
         X_num = X.drop(columns=self.categorical_columns, inplace=False).values
-        # 正規化 入力：ndarray　出力：ndarray
         X_num = self.mm.fit_transform(X_num)
-        # 特徴量選択 入力：ndarray 出力: ndarray
         X_fs, self.f_ohe, self.f_num = self.feature_selection(X_ohe, X_num, y)
-        # サブシステムに分割 入力：ndarray　出力：ndarray
         self.attack_data, self.normal_data = self.splitsubsystem(X_fs, y)
-        # サンプリング 入力：ndarray　出力：ndarray
         self.sampled_attack = self.make_cluster(self.attack_data)
         self.sampled_normal = self.make_cluster(self.normal_data)
     
-        ## training 入力：ndarray
         self.iforest_attack.fit(self.sampled_attack)
         self.iforest_normal.fit(self.sampled_normal)
         
@@ -121,18 +112,13 @@ class AnomalyDetector_mean:
         predictions = []
         total_points = len(X)
 
-        ## preprocessing
-        # one-hotエンコード　入力：DataFrame　出力：ndarray
         X_ohe = self.ohe.transform(X[self.categorical_columns])
         X_num = X.drop(columns=self.categorical_columns, inplace=False).values
-        # 正規化　入力：ndarray 出力：ndarray
         X_num = self.mm.transform(X_num) # numeicalデータにだけでよい
-        # 特徴量選択 入力：ndarray 出力：ndarray    
         X_ohe = X_ohe[:, self.f_ohe]
         X_num = X_num[:, self.f_num]
         self.X_processed = np.concatenate([X_ohe, X_num], axis=1)
     
-        ## predict
         attack_prd = self.iforest_attack.predict(self.X_processed)
         attack_prd = [1 if result == 1 else 0 for result in attack_prd]   
         self.attack_prd = attack_prd
