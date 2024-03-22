@@ -26,6 +26,7 @@ class AnomalyDetector_mean:
         self.k = parameters['k']
         self.n_estimators = parameters['n_estimators']
         self.max_features = parameters['max_features']
+        self.max_samples = parameters['max_samples']
         self.c_attack = parameters['c_attack']
         self.c_normal = parameters['c_normal']
         self.n_ohe = parameters['n_ohe']
@@ -34,8 +35,8 @@ class AnomalyDetector_mean:
 
         self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
         self.mm = preprocessing.MinMaxScaler()
-        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_attack)
-        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=500, max_features=self.max_features, contamination=self.c_normal)
+        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=self.max_samples, max_features=self.max_features, contamination=self.c_attack)
+        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=self.max_samples, max_features=self.max_features, contamination=self.c_normal)
         
         self.sampled_attack = None
         self.sampled_normal = None

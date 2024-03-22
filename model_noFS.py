@@ -76,18 +76,18 @@ class AnomalyDetector_noFS:
             return data
 
     def preprocess(self, X, if_train):
-        # one-hotエンコード 入力：DataFrame　出力：ndarray
         if if_train==True: # 学習時
             self.ohe.fit(X[self.categorical_columns])
         X_ohe = self.ohe.transform(X[self.categorical_columns])
         X_num = X.drop(columns=self.categorical_columns).values
-        # 正規化 入力：ndarray　出力：ndarray
-        X_num = self.mm.fit_transform(X_num)
+        if if_train:
+            X_num = self.mm.fit_transform(X_num)
+        else:
+            X_num = self.mm.transform(X_num)
         X_processed = np.concatenate([X_num, X_ohe], axis=1)
         return X_processed
             
     def fit(self, X, y):
-        ## 前処理 入力：DataFrame 出力：ndarray
         X_processed = self.preprocess(X, if_train=True)
         # サブシステムに分割 入力：ndarray　出力：ndarray
         self.attack_data, self.normal_data = self.splitsubsystem(X_processed, y)
