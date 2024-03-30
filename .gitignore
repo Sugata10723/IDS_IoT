@@ -7,3 +7,4 @@ mlruns/
 .ipynb_checkpoints/
 .gitignore
 pickles/
+venv/
