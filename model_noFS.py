@@ -33,8 +33,8 @@ class AnomalyDetector_noFS:
         self.categorical_columns = categorical_columns
         self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
         self.mm = preprocessing.MinMaxScaler()
-        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=self.max_samples, max_features=self.max_features, contamination=self.c_attack, bootstrap=True, n_jobs=-1, random_state=42, verbose=10, warm_start=True)
-        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=self.max_samples, max_features=self.max_features, contamination=self.c_normal, bootstrap=True, n_jobs=-1, random_state=42, verbose=10, warm_start=True)
+        self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=self.max_samples, max_features=self.max_features, contamination=self.c_attack, bootstrap=True, n_jobs=-1, random_state=42, verbose=0, warm_start=True)
+        self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=self.max_samples, max_features=self.max_features, contamination=self.c_normal, bootstrap=True, n_jobs=-1, random_state=42, verbose=0, warm_start=True)
 
         self.sampled_attack = None
         self.sampled_normal = None

@@ -106,14 +106,14 @@ class AnomalyDetector_cor:
         X_ohe = self.ohe.transform(X[self.categorical_columns])
         X_num = X.drop(columns=self.categorical_columns).values
         X_num = self.mm.transform(X_num)
-        X_processed = np.concatenate([X_num, X_ohe], axis=1)
-        X_processed = X_processed[:, self.selected_features]
+        self.X_processed = np.concatenate([X_num, X_ohe], axis=1)
+        self.X_processed = self.X_processed[:, self.selected_features]
 
-        attack_prd = self.iforest_attack.predict(X_processed)
+        attack_prd = self.iforest_attack.predict(self.X_processed)
         attack_prd = [1 if result == 1 else 0 for result in attack_prd]   
         self.attack_prd = attack_prd
         
-        normal_prd = self.iforest_normal.predict(X_processed)
+        normal_prd = self.iforest_normal.predict(self.X_processed)
         normal_prd = [1 if result == 1 else 0 for result in normal_prd]
         self.normal_prd = [0 if x == 1 else 1 for x in normal_prd] # normalの判定は逆になる
         

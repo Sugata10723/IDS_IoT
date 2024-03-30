@@ -53,6 +53,8 @@ class Dataset_NSL_KDD:
         # Preprocess data
         X_train, y_train = self.preprocess(X_train, config)
         X_test, y_test = self.preprocess(X_test, config)
+        y_train = y_train.to_numpy() # Pandas Series -> NumPy Array
+        y_test = y_test.to_numpy()
         
         return X_train, X_test, y_train, y_test
 
