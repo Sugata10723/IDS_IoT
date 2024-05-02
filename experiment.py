@@ -8,6 +8,7 @@ from model_hybrid import AnomalyDetector_hybrid
 from model_var import AnomalyDetector_var
 from model_mean import AnomalyDetector_mean
 from model_cor import AnomalyDetector_cor
+from model_FI import AnomalyDetector_FI
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 from sklearn.model_selection import GridSearchCV
 
@@ -93,6 +94,15 @@ class Experiment:
         self.evaluate()
         if if_plot:
             self.print_results("Correlation")
+            plotter.plot_confusion_matrix(self.y_test, self.prediction, self.model.attack_prd, self.model.normal_prd)
+            self.model.plot_anomaly_scores()
+
+    def run_FI(self, model_params, if_plot):
+        self.model = AnomalyDetector_FI(model_params, self.config['categorical_columns'])
+        self.fit()
+        self.evaluate()
+        if if_plot:
+            self.print_results("Feature Importance")
             plotter.plot_confusion_matrix(self.y_test, self.prediction, self.model.attack_prd, self.model.normal_prd)
             self.model.plot_anomaly_scores()
 

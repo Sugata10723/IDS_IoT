@@ -3,8 +3,7 @@ import numpy as np
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import OneHotEncoder
-import xgboost as xgb
-from sklearn.decomposition import PCA
+from sklearn.ensemble import RandomForestClassifier
 from scipy.spatial import distance
 import sklearn.preprocessing as preprocessing
 import plotter 
@@ -21,7 +20,7 @@ import matplotlib.pyplot as plt
 #################################################################################
 
 
-class AnomalyDetector_hybrid:
+class AnomalyDetector_FI:
     def __init__(self, parameters, categorical_columns):
         self.k = parameters['k']
         self.n_estimators = parameters['n_estimators']
@@ -29,14 +28,13 @@ class AnomalyDetector_hybrid:
         self.max_samples = parameters['max_samples']
         self.c_attack =  parameters['c_attack']
         self.c_normal = parameters['c_normal']
-        self.n_fi = parameters['n_fi']
-        self.n_pca = parameters['n_pca']
+        self.threshold = parameters['threshold']
         self.categorical_columns = categorical_columns
+
         self.ohe = preprocessing.OneHotEncoder(sparse_output=False, categories='auto', handle_unknown='ignore')
         self.mm = preprocessing.MinMaxScaler()
         self.iforest_attack = IsolationForest(n_estimators=self.n_estimators, max_samples=self.max_samples, max_features=self.max_features, contamination=self.c_attack)
         self.iforest_normal = IsolationForest(n_estimators=self.n_estimators, max_samples=self.max_samples, max_features=self.max_features, contamination=self.c_normal)
-        self.pca = PCA(n_components=self.n_pca)
 
         self.important_features = None
         self.sampled_attack = None
@@ -53,46 +51,23 @@ class AnomalyDetector_hybrid:
         normal_indices = np.where(y == 0)[0]
         return X[attack_indices], X[normal_indices]
 
-    def feature_selection(self, categorical_data, numerical_data, y):
-        # カテゴリ変数に対してFIを用いて特徴量選択
+    def feature_selection(self, data, y):
         model = RandomForestClassifier() # 使用するモデルはrandomforest
-        model.fit(categorical_data, y)
+        model.fit(data, y)
         feature_importances = model.feature_importances_
-        important_features = np.argsort(feature_importances)[::-1][:self.n_fi]
-        data_fi = categorical_data[:, important_features]
-        # 数値変数に対してPCAを用いて特徴量選択
-        data_pca = self.pca.fit_transform(numerical_data)
-        # 特徴量選択後のデータを結合 出力：DataFrame
-        data_fs = np.concatenate([data_fi, data_pca], axis=1)
+        important_features = np.where(feature_importances > self.threshold)[0]
+        data_fi = data[:, important_features]
+        self.plot_feature_importance(feature_importances)
 
-        return data_fs, important_features 
+        return data_fi, important_features
 
-    def get_nearest_points(self, data, kmeans):
-        distances = kmeans.transform(data[:, :-1])
-        nearest_points = []
-        for i in range(kmeans.n_clusters):
-            cluster_indices = np.where(data[:, -1] == i)[0]
-            if len(cluster_indices) > 0:  # k-meansの特性より、空のクラスタが存在する可能性がある
-                nearest_index = cluster_indices[np.argmin(distances[cluster_indices, i])]
-                nearest_points.append(data[nearest_index])
-        nearest_points = np.array(nearest_points)
-        # サンプリング数がクラスタ数より少ない場合は、足りない分をランダムサンプリング
-        if len(nearest_points) < self.k:
-            random_indices = np.random.choice(len(data), self.k - len(nearest_points), replace=False)
-            nearest_points = np.concatenate([nearest_points, data[random_indices]])
-        nearest_points = nearest_points[:, :-1] 
-        return nearest_points
-
-    def make_cluster(self, data):
-        if len(data) < self.k: # サンプル数がkより小さい場合はそのまま返す
-            return data
-        else:
-            kmeans = MiniBatchKMeans(n_clusters=self.k, init='k-means++', batch_size=100, tol=0.01, n_init=10) 
-            clusters = kmeans.fit_predict(data)
-            data = np.column_stack((data, clusters))  # 'cluster' columnを追加
-            data_sampled = self.get_nearest_points(data, kmeans)
-            print(f"sampled data is :{data_sampled.shape}")
-            return data_sampled
+    def plot_feature_importance(self, feature_importances):
+        plt.figure(figsize=(12, 6))
+        plt.title('Feature Importance')
+        plt.xlabel('Feature')
+        plt.ylabel('Importance')
+        plt.bar(range(len(feature_importances)), feature_importances)
+        plt.show()
 
     def fit(self, X, y):
         ## Preprocessing X: Pandas DataFrame, y: NumPy Array
@@ -101,17 +76,15 @@ class AnomalyDetector_hybrid:
         X_num = X.drop(columns=self.categorical_columns, inplace=False).values
         # 正規化 入力：ndarray　出力：ndarray
         X_num = self.mm.fit_transform(X_num)
+        X_processed = np.concatenate([X_ohe, X_num], axis=1)
         # 特徴量選択 入力：ndarray 出力: ndarray
-        X_fs, self.important_features = self.feature_selection(X_ohe, X_num, y)
+        X_fs, self.important_features = self.feature_selection(X_processed, y)
         # サブシステムに分割 入力：ndarray　出力：ndarray
         self.attack_data, self.normal_data = self.splitsubsystem(X_fs, y)
-        # サンプリング 入力：ndarray　出力：ndarray
-        self.sampled_attack = self.make_cluster(self.attack_data)
-        self.sampled_normal = self.make_cluster(self.normal_data)
     
         ## training 入力：ndarray
-        self.iforest_attack.fit(self.sampled_attack)
-        self.iforest_normal.fit(self.sampled_normal)
+        self.iforest_attack.fit(self.attack_data)
+        self.iforest_normal.fit(self.normal_data)
 
         
     def predict(self, X):
@@ -124,10 +97,9 @@ class AnomalyDetector_hybrid:
         X_num = X.drop(columns=self.categorical_columns, inplace=False).values
         # 正規化　入力：ndarray 出力：ndarray
         X_num = self.mm.transform(X_num) # numeicalデータにだけでよい
+        X_processed = np.concatenate([X_ohe, X_num], axis=1)
         # 特徴量選択 入力：ndarray 出力：ndarray    
-        X_ohe = X_ohe[:, self.important_features]
-        X_num = self.pca.transform(X_num)
-        self.X_processed = np.concatenate([X_ohe, X_num], axis=1)
+        self.X_processed = X_processed[:, self.important_features]
     
         ## predict
         attack_prd = self.iforest_attack.predict(self.X_processed)

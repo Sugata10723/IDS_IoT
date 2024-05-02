@@ -76,7 +76,7 @@ class AnomalyDetector_cor:
         return nearest_points
 
     def make_cluster(self, data):
-        if len(data) > self.k:
+        if len(data) > self.k and self.if_sampling == True:
             kmeans = MiniBatchKMeans(n_clusters=self.k, init='k-means++', batch_size=100, tol=0.01, n_init=10) 
             clusters = kmeans.fit_predict(data)
             data = np.column_stack((data, clusters))
